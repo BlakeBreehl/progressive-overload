@@ -1,8 +1,12 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { AuthScreen, ConfigurationScreen } from './AuthScreen'
+import { defaultModules, type ModuleKey, type ModuleState } from './domain/modules'
+import { resolveAuthView } from './lib/authGuard'
+import { useAuth } from './lib/AuthProvider'
+import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { completeOnboarding, loadUserSetup, saveModuleSettings } from './lib/settings'
 
-type ModuleKey = 'strength' | 'cardio' | 'mobility' | 'weight'
 type Screen = 'home' | ModuleKey | 'progress' | 'settings'
-type ModuleState = Record<ModuleKey, boolean>
 
 const modules: Record<ModuleKey, { label: string; icon: string; blurb: string; color: string }> = {
   strength: { label: 'Strength', icon: 'dumbbell', blurb: 'Sets, reps & actual PRs', color: '#b9ff35' },
@@ -40,8 +44,8 @@ function EmptyScreen({ screen, add }: { screen: Exclude<Screen,'home'|'settings'
   return <section><p className="eyebrow">{screen==='progress'?'THE BIG PICTURE':'TRAINING MODULE'}</p><h1 className="page-title">{item.label}</h1><div className="empty-card"><div className="empty-icon"><Icon name={item.icon} size={34}/></div><h2 className="font-display text-2xl font-bold text-white">Nothing here yet</h2><p className="mt-2 max-w-md text-sm leading-relaxed text-slate-400">{detail}</p>{screen!=='progress'&&<button className="primary-button mt-6" onClick={add}><Icon name="plus"/> Add {item.label} entry</button>}</div></section>
 }
 
-function Settings({ enabled, change }: { enabled:ModuleState; change:(s:ModuleState)=>void }) {
-  return <section><p className="eyebrow">MAKE IT YOURS</p><h1 className="page-title">Settings</h1><div className="mt-7 max-w-2xl"><div className="surface-card"><h2 className="font-display text-lg font-bold text-white">Training modules</h2><p className="mt-1 text-sm text-slate-500">Choose what appears in navigation and the Add menu.</p><div className="mt-6 divide-y divide-white/[.06]">{(Object.keys(modules) as ModuleKey[]).map(key=>{const item=modules[key];return <div className="flex items-center gap-4 py-4 first:pt-0 last:pb-0" key={key}><span className="module-icon" style={moduleStyle(item.color)}><Icon name={item.icon}/></span><div className="flex-1"><strong className="text-sm text-white">{item.label}</strong><p className="text-xs text-slate-500">{item.blurb}</p></div><button role="switch" aria-checked={enabled[key]} aria-label={`Enable ${item.label}`} onClick={()=>change({...enabled,[key]:!enabled[key]})} className={`toggle ${enabled[key]?'toggle-on':''}`}><span/></button></div>})}</div></div><div className="mt-4 rounded-2xl border border-lime/10 bg-lime/[.04] p-4 text-xs leading-relaxed text-slate-400"><strong className="text-lime">Your history stays yours.</strong> Turning off a module only hides it. It never deletes data.</div><div className="surface-card mt-4 flex justify-between text-sm"><span className="text-slate-400">PeakForm</span><span className="text-slate-600">Foundation · v0.1</span></div></div></section>
+function Settings({ enabled, change, signOut }: { enabled:ModuleState; change:(s:ModuleState)=>void; signOut:()=>void }) {
+  return <section><p className="eyebrow">MAKE IT YOURS</p><h1 className="page-title">Settings</h1><div className="mt-7 max-w-2xl"><div className="surface-card"><h2 className="font-display text-lg font-bold text-white">Training modules</h2><p className="mt-1 text-sm text-slate-500">Choose what appears in navigation and the Add menu.</p><div className="mt-6 divide-y divide-white/[.06]">{(Object.keys(modules) as ModuleKey[]).map(key=>{const item=modules[key];return <div className="flex items-center gap-4 py-4 first:pt-0 last:pb-0" key={key}><span className="module-icon" style={moduleStyle(item.color)}><Icon name={item.icon}/></span><div className="flex-1"><strong className="text-sm text-white">{item.label}</strong><p className="text-xs text-slate-500">{item.blurb}</p></div><button role="switch" aria-checked={enabled[key]} aria-label={`Enable ${item.label}`} onClick={()=>change({...enabled,[key]:!enabled[key]})} className={`toggle ${enabled[key]?'toggle-on':''}`}><span/></button></div>})}</div></div><div className="mt-4 rounded-2xl border border-lime/10 bg-lime/[.04] p-4 text-xs leading-relaxed text-slate-400"><strong className="text-lime">Your history stays yours.</strong> Turning off a module only hides it. It never deletes data.</div><div className="surface-card mt-4 flex items-center justify-between text-sm"><div><span className="block text-slate-400">PeakForm</span><span className="text-xs text-slate-600">Foundation · v0.2</span></div><button className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold text-slate-400 hover:text-white" onClick={signOut}>Sign out</button></div></div></section>
 }
 
 function AddSheet({ enabled, close, pick }: { enabled:ModuleState; close:()=>void; pick:(k:ModuleKey)=>void }) {
