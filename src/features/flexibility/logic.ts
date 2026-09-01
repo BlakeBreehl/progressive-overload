@@ -1,0 +1,4 @@
+export const bodyAreas=['Calves','Hamstrings','Quads','Glutes','Hips','Hip Flexors','Adductors','Abductors','Ankles','Lower Back','Upper Back','Back','Chest','Shoulders','Rear Delts','Biceps','Triceps','Forearms','Wrists','Neck','Core','Full Body'] as const
+export const totalFlexibilityDuration=(durationPerSet:number,sets:number)=>durationPerSet*sets
+export function validateFlexibility(durationPerSet:number,sets:number){const errors:string[]=[];if(!Number.isFinite(durationPerSet)||durationPerSet<1)errors.push('Duration per set must be at least one second.');if(!Number.isInteger(sets)||sets<1)errors.push('Sets must be a positive whole number.');return errors}
+export const filterFlexibilityActivities=<T extends{name:string;areas:string[]}>(items:T[],query:string,area:string)=>items.filter(item=>item.name.toLowerCase().includes(query.trim().toLowerCase())&&(!area||item.areas.includes(area)))

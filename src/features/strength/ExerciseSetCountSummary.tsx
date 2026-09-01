@@ -1,0 +1,2 @@
+import type{Exercise}from'./types'
+export function ExerciseSetCountSummary({exercises}:{exercises:Exercise[]}){return <details className="surface-card mb-4"><summary className="cursor-pointer font-bold text-ink">Recorded set counts</summary><div className="mt-3 grid gap-2 sm:grid-cols-2">{exercises.map(exercise=><div className="flex justify-between text-sm" key={exercise.id}><span>{exercise.name}</span><strong>{exercise.usageCount} sets</strong></div>)}</div></details>}

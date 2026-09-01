@@ -1,0 +1,3 @@
+export function Pagination({ page, pages, start, end, total, onChange }: { page: number; pages: number; start: number; end: number; total: number; onChange: (page: number) => void }) {
+  return <nav className="pagination" aria-label="History pages"><span className="text-xs text-slate-500">Showing {start}–{end} of {total}</span><div className="flex items-center gap-2"><button className="secondary-button" disabled={page <= 1} onClick={() => onChange(page - 1)}>Previous</button><span className="text-sm text-ink" aria-live="polite">Page {page} of {pages}</span><button className="secondary-button" disabled={page >= pages} onClick={() => onChange(page + 1)}>Next</button></div></nav>;
+}

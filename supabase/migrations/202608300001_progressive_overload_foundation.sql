@@ -1,4 +1,4 @@
--- PEAKFORM FOUNDATION — PASTE THIS ENTIRE FILE INTO THE SUPABASE SQL EDITOR
+-- PROGRESSIVE OVERLOAD FOUNDATION — PASTE THIS ENTIRE FILE INTO THE SUPABASE SQL EDITOR
 -- Forward-only migration. It creates application tables, constraints, triggers, and RLS policies.
 -- It does not seed workout data and contains no estimated-strength metrics.
 
@@ -160,6 +160,22 @@ create table public.weigh_ins (
   weight_unit public.weight_unit not null, notes text, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 
+-- Composite ownership keys prevent cross-user references even when both rows independently pass RLS.
+alter table public.locations add constraint locations_id_user_unique unique (id, user_id);
+alter table public.exercises add constraint exercises_id_user_unique unique (id, user_id);
+alter table public.exercises add constraint exercises_id_user_tracking_unique unique (id, user_id, tracking_type);
+alter table public.strength_workouts add constraint strength_workouts_id_user_unique unique (id, user_id);
+alter table public.cardio_activities add constraint cardio_activities_id_user_unique unique (id, user_id);
+alter table public.mobility_activities add constraint mobility_activities_id_user_unique unique (id, user_id);
+alter table public.exercise_muscle_assignments add constraint exercise_muscles_owned_fk foreign key (exercise_id, user_id) references public.exercises(id, user_id) on delete cascade;
+alter table public.strength_workouts add constraint strength_workout_location_owned_fk foreign key (location_id, user_id) references public.locations(id, user_id);
+alter table public.strength_sets add constraint strength_set_workout_owned_fk foreign key (workout_id, user_id) references public.strength_workouts(id, user_id) on delete cascade;
+alter table public.strength_sets add constraint strength_set_exercise_type_owned_fk foreign key (exercise_id, user_id, tracking_type) references public.exercises(id, user_id, tracking_type);
+alter table public.historical_strength_records add constraint historical_exercise_type_owned_fk foreign key (exercise_id, user_id, tracking_type) references public.exercises(id, user_id, tracking_type);
+alter table public.cardio_sessions add constraint cardio_activity_owned_fk foreign key (activity_id, user_id) references public.cardio_activities(id, user_id);
+alter table public.cardio_sessions add constraint cardio_location_owned_fk foreign key (location_id, user_id) references public.locations(id, user_id);
+alter table public.mobility_sessions add constraint mobility_activity_owned_fk foreign key (activity_id, user_id) references public.mobility_activities(id, user_id);
+
 create or replace function public.set_updated_at() returns trigger language plpgsql set search_path = '' as $$
 begin new.updated_at = now(); return new; end; $$;
 create or replace function public.enforce_owned_reference() returns trigger language plpgsql set search_path = '' as $$
@@ -184,6 +200,14 @@ begin
   return new;
 end; $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+
+-- Backfill only identity companion rows when the project already contains auth users.
+insert into public.profiles(user_id, display_name)
+select id, nullif(raw_user_meta_data ->> 'display_name', '') from auth.users
+on conflict (user_id) do nothing;
+insert into public.user_settings(user_id)
+select id from auth.users
+on conflict (user_id) do nothing;
 
 do $$ declare t text; begin
   foreach t in array array['profiles','user_settings','locations','exercises','exercise_muscle_assignments','strength_workouts','strength_sets','historical_strength_records','cardio_activities','cardio_sessions','mobility_activities','mobility_sessions','weigh_ins']

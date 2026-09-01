@@ -1,0 +1,3 @@
+export type ExerciseUsage={exerciseId:string;exerciseName:string;date:string};
+export const normalizedExerciseName=(value:string)=>value.trim().replace(/\s+/g," ").toLocaleLowerCase();
+export function defaultStrengthExercise(rows:ExerciseUsage[]){const usage=new Map<string,{id:string;name:string;count:number;latest:string}>();for(const row of rows){const current=usage.get(row.exerciseId)??{id:row.exerciseId,name:row.exerciseName,count:0,latest:""};current.count++;if(row.date>current.latest)current.latest=row.date;usage.set(row.exerciseId,current)}return[...usage.values()].sort((a,b)=>b.count-a.count||b.latest.localeCompare(a.latest)||normalizedExerciseName(a.name).localeCompare(normalizedExerciseName(b.name))||a.id.localeCompare(b.id))[0]}

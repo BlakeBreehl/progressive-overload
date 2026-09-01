@@ -1,5 +1,5 @@
-const CACHE = 'peakform-shell-v1'
-const APP_SHELL = ['/', '/manifest.webmanifest', '/favicon.svg']
+const CACHE = 'progressive-overload-shell-v4'
+const APP_SHELL = ['/', '/manifest.webmanifest', '/brand-icon.svg', '/favicon.svg', '/icons/favicon-32.png', '/icons/favicon-48.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png', '/icons/apple-touch-icon.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)))
@@ -12,10 +12,13 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return
+  const url = new URL(event.request.url)
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/rest/') || url.pathname.startsWith('/auth/') || url.hostname.includes('supabase')) return
   event.respondWith(fetch(event.request).then((response) => {
-    const copy = response.clone()
-    caches.open(CACHE).then((cache) => cache.put(event.request, copy))
+    if (response.ok) {
+      const copy = response.clone()
+      caches.open(CACHE).then((cache) => cache.put(event.request, copy))
+    }
     return response
-  }).catch(() => caches.match(event.request).then((cached) => cached || caches.match('/'))))
+  }).catch(() => caches.match(event.request).then((cached) => cached || (event.request.mode === 'navigate' ? caches.match('/') : undefined))))
 })
