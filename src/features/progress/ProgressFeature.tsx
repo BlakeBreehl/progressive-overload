@@ -7,7 +7,6 @@ import {
   LineChart,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
   YAxis,
 } from "recharts";
 import type { ModuleKey, ModuleState } from "../../domain/modules";
@@ -24,6 +23,8 @@ import {
 } from "./logic";
 import { defaultStrengthExercise } from "./defaultExercise";
 import { loadStrengthProgressRows, strengthExerciseUsage, type StrengthProgressRow } from "./repository";
+import { TimeXAxis } from "../../components/TimeXAxis";
+import { fullLocalDateLabel } from "../../lib/timeAxis";
 
 type StrengthRow = StrengthProgressRow;
 type HistoricalRow = {
@@ -145,7 +146,7 @@ function StrengthTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-xl">
-      <strong>{label}</strong>
+       <strong>{label?fullLocalDateLabel(label):""}</strong>
       {payload.map((item) => (
         <p key={item.name}>
           {item.name}: {item.value} {unit}
@@ -310,15 +311,12 @@ function StrengthProgress({
         <h2 className="font-display text-lg font-bold text-ink">
           {exerciseName} Progress
         </h2>
-        <p className="text-xs text-slate-500">
-          Recorded weight and reps only—no estimated strength.
-        </p>
         <div className="mt-3 h-80">
           {chart.length ? (
             <ResponsiveContainer>
               <LineChart data={chart}>
                 <CartesianGrid stroke="#e5e5e5" strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
+                <TimeXAxis dates={chart.map(point=>point.date)} />
                 <YAxis domain={strengthDomain} unit={` ${chartUnit}`} />
                 <Tooltip content={<StrengthTooltip unit={chartUnit} />} />
                 <Legend />
@@ -465,14 +463,14 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
             <ResponsiveContainer>
               <LineChart data={chart}>
                 <CartesianGrid stroke="#e5e5e5" />
-                <XAxis dataKey="date" />
+                <TimeXAxis dates={chart.map(point=>point.date)} />
                 <YAxis domain={cardioDomain} />
                 <Tooltip
                   content={({ active, payload, label }) =>
                     active && payload?.length ? (
                       <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-xl">
                         <strong>
-                          {activity} · {label}
+                          {activity} · {fullLocalDateLabel(String(label))}
                         </strong>
                         <p>Duration: {duration(payload[0].payload.duration)}</p>
                         {payload[0].payload.distance != null && (
@@ -607,9 +605,9 @@ function FlexProgress({ rows }: { rows: FlexRow[] }) {
               <ResponsiveContainer>
                 <LineChart data={items as typeof visible}>
                   <CartesianGrid stroke="#e5e5e5" />
-                  <XAxis dataKey="date" />
+                  <TimeXAxis dates={(items as typeof visible).map(item=>item.date)} />
                   <YAxis domain={paddedDomain((items as typeof visible).map(item=>kind==="time"?item.time:item.reps),kind==="time"?timeAxes:repAxes)} />
-                  <Tooltip />
+                  <Tooltip labelFormatter={label=>fullLocalDateLabel(String(label))}/>
                   <Legend />
                   <Line
                     dataKey={kind === "time" ? "time" : "reps"}

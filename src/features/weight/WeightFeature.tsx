@@ -8,7 +8,6 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
   YAxis,
 } from "recharts";
 import {
@@ -35,6 +34,8 @@ import { calendarChanges, type ChangePeriod } from "./calendarChanges";
 import { Pagination } from "../../components/Pagination";
 import { EntrySuccessActions } from "../../components/EntrySuccessActions";
 import { validHistoryPage } from "../../lib/pagedHistory";
+import { TimeXAxis } from "../../components/TimeXAxis";
+import { fullLocalDateLabel } from "../../lib/timeAxis";
 type Form = {
   id?: string;
   date: string;
@@ -340,9 +341,10 @@ export function WeightFeature({
             margin={{ top: 10, right: 12, left: -15, bottom: 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#ddd" />
-            <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+            <TimeXAxis dates={chart.map(point=>point.date)} />
             <YAxis domain={weightDomain} unit={` ${unit}`} tick={{ fontSize: 10 }} />
             <Tooltip
+              labelFormatter={label=>fullLocalDateLabel(String(label))}
               formatter={(value, name) => [
                 `${Number(value).toFixed(1)} ${unit}`,
                 name === "morning" ? "Morning" : "Evening",
@@ -376,7 +378,7 @@ export function WeightFeature({
         <ChartControls settings={changeAxes} setSettings={setChangeAxes} unit={`${unit} / %`} />
         <div className="grid gap-3 sm:grid-cols-3"><Card label={`Latest ${changeAggregation} average`} value={latestChange?.average} unit={unit}/><Card label="Change from previous" value={latestChange?.change??undefined} unit={unit}/><Card label="Percent change" value={latestChange?.percentChange??undefined} unit="%"/></div>
         <p className="text-xs text-slate-500">Daily readings are averaged once per calendar day. Missing days are ignored. A previous adjacent period is required for change.</p>
-        <div className="grid gap-4 lg:grid-cols-2"><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Absolute Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><XAxis dataKey="label" minTickGap={28}/><YAxis domain={absoluteDomain} unit={` ${unit}`}/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={unit}/>:null}/><Line dataKey="change" stroke="#d71920" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Percent Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><XAxis dataKey="label" minTickGap={28}/><YAxis domain={percentDomain} unit="%"/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={unit}/>:null}/><Line dataKey="percentChange" stroke="#111" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div></div>
+        <div className="grid gap-4 lg:grid-cols-2"><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Absolute Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis domain={absoluteDomain} unit={` ${unit}`}/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={unit}/>:null}/><Line dataKey="change" stroke="#d71920" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Percent Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis domain={percentDomain} unit="%"/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={unit}/>:null}/><Line dataKey="percentChange" stroke="#111" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div></div>
       </section>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Card label="Latest Morning" value={stats?.latestMorning} unit={unit} />
