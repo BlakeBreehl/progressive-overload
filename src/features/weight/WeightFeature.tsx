@@ -34,6 +34,7 @@ import { ChartControls, defaultAxisSettings, paddedDomain, rangeDates, type Axis
 import { calendarChanges, type ChangePeriod } from "./calendarChanges";
 import { Pagination } from "../../components/Pagination";
 import { EntrySuccessActions } from "../../components/EntrySuccessActions";
+import { validHistoryPage } from "../../lib/pagedHistory";
 type Form = {
   id?: string;
   date: string;
@@ -163,7 +164,7 @@ export function WeightFeature({
   }, [range, start, end]);
   const visible = filterReadings(items, dates.start, dates.end, period),
     stats = summary(visible);
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getWeightHistoryPage(client,userId,{page:historyPage,period,start:dates.start,end:dates.end}).then(result=>{if(!active)return;setHistoryItems(result.items);setHistoryTotal(result.total)}).catch(()=>{if(active)setError("Bodyweight history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,period,dates.start,dates.end,loading]);
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getWeightHistoryPage(client,userId,{page:historyPage,period,start:dates.start,end:dates.end}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Bodyweight history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,period,dates.start,dates.end,loading]);
   const historyResults = {items:historyItems,total:historyTotal,page:historyPage,pages:Math.max(1,Math.ceil(historyTotal/20)),start:historyTotal?(historyPage-1)*20+1:0,end:Math.min(historyPage*20,historyTotal)};
   const axisDates=rangeDates(weightAxes),axisVisible=filterReadings(items,axisDates.start,axisDates.end,period),chart = [...new Set(axisVisible.map((x) => x.measuredAt.slice(0, 10)))]
     .sort()

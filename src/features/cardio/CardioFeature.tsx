@@ -27,6 +27,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Combobox, Select } from "../../components/SelectionControls";
 import { Pagination } from "../../components/Pagination";
 import { EntrySuccessActions } from "../../components/EntrySuccessActions";
+import { validHistoryPage } from "../../lib/pagedHistory";
 type Form = {
   id?: string;
   activityId: string;
@@ -105,7 +106,7 @@ export function CardioFeature({
     if (create)
       queueMicrotask(() => setForm((current) => current ?? blank(locations)));
   }, [create, locations]);
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getCardioHistoryPage(client,userId,{page:historyPage,search:debouncedSearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none"}).then(result=>{if(!active)return;setEntries(result.items);setHistoryTotal(result.total)}).catch(()=>{if(active)setError("Cardio history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedSearch,historyLocation,loading]);
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getCardioHistoryPage(client,userId,{page:historyPage,search:debouncedSearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none"}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setEntries(result.items)}).catch(()=>{if(active)setError("Cardio history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedSearch,historyLocation,loading]);
   const edit = (entry: CardioSession) => {
     const p = durationParts(entry.durationSeconds);
     setForm({

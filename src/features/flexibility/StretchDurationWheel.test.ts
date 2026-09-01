@@ -28,6 +28,9 @@ describe("Stretch MM:SS wheel", () => {
     expect(flexRaw).toContain('selected.trackingType === "time"');
     expect(flexRaw).toContain("form.sets.map");
     expect(flexRaw).toContain("<DurationWheel");
+    expect(flexRaw).toContain("set.id ?? set.clientKey");
+    expect(flexRaw).not.toContain("key={set.id ?? index}");
+    expect(flexRaw).toContain("updateSet(index, current=>");
   });
   it("supports mouse wheel and keyboard selection", () => {
     expect(column).toContain("onWheel=");

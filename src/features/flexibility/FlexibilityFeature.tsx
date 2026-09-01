@@ -31,6 +31,7 @@ import {
 } from "../../components/SelectionControls";
 import { Pagination } from "../../components/Pagination";
 import { EntrySuccessActions } from "../../components/EntrySuccessActions";
+import { validHistoryPage } from "../../lib/pagedHistory";
 type Form = {
   id?: string;
   activityId: string;
@@ -41,7 +42,7 @@ type Form = {
 const blank = (): Form => ({
   activityId: "",
   date: localDateKey(new Date().toISOString()),
-  sets: [{ setOrder: 1, durationSeconds: 30 }],
+  sets: [{ clientKey:crypto.randomUUID(),setOrder: 1, durationSeconds: 30 }],
   notes: "",
 });
 const durationParts = (value: number) => ({
@@ -52,8 +53,8 @@ const durationParts = (value: number) => ({
     stretchDurationSeconds(minutes, seconds);
 const nextSet = (type: FlexTracking, index: number): FlexSet =>
   type === "time"
-    ? { setOrder: index, durationSeconds: 30 }
-    : { setOrder: index, reps: 1 };
+    ? { clientKey:crypto.randomUUID(),setOrder: index, durationSeconds: 30 }
+    : { clientKey:crypto.randomUUID(),setOrder: index, reps: 1 };
 export function FlexibilityFeature({
   client,
   userId,
@@ -105,7 +106,7 @@ export function FlexibilityFeature({
   useEffect(() => {
     if (create) queueMicrotask(() => setForm((current) => current ?? blank()));
   }, [create]);
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getFlexHistoryPage(client,userId,{page:historyPage,search:debouncedHistorySearch,bodyArea:historyArea||undefined,trackingType:historyTracking==="all"?undefined:historyTracking}).then(result=>{if(!active)return;setEntries(result.items);setHistoryTotal(result.total)}).catch(()=>{if(active)setError("Stretch history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedHistorySearch,historyArea,historyTracking,loading]);
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getFlexHistoryPage(client,userId,{page:historyPage,search:debouncedHistorySearch,bodyArea:historyArea||undefined,trackingType:historyTracking==="all"?undefined:historyTracking}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setEntries(result.items)}).catch(()=>{if(active)setError("Stretch history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedHistorySearch,historyArea,historyTracking,loading]);
   const selected = activities.find((a) => a.id === form?.activityId);
   const choose = (activityId: string) => {
     const activity = activities.find((a) => a.id === activityId);
@@ -115,8 +116,8 @@ export function FlexibilityFeature({
         sets: [nextSet(activity?.trackingType ?? "time", 1)],
       }:current);
   };
-  const updateSet = (index: number, value: FlexSet) =>
-    setForm(current=>current?{...current,sets:current.sets.map((s,i)=>i===index?value:s)}:current);
+  const updateSet = (index: number, update:(set:FlexSet)=>FlexSet) =>
+    setForm(current=>current?{...current,sets:current.sets.map((s,i)=>i===index?update(s):s)}:current);
   const removeSet = (index: number) =>
     setForm(current=>current&&current.sets.length>1?{
       ...current,
@@ -129,7 +130,7 @@ export function FlexibilityFeature({
       ...current,
       sets: [
         ...current.sets.slice(0, index + 1),
-        { ...current.sets[index], id: undefined },
+        { ...current.sets[index], id: undefined,clientKey:crypto.randomUUID() },
         ...current.sets.slice(index + 1),
       ].map((s, i) => ({ ...s, setOrder: i + 1 })),
     }:current);
@@ -256,7 +257,7 @@ export function FlexibilityFeature({
           {selected && (
             <div className="mt-5 space-y-3">
               {form.sets.map((set, index) => (
-                <div className="set-card" key={set.id ?? index}>
+                <div className="set-card" key={set.id ?? set.clientKey}>
                   <div className="flex items-center justify-between">
                     <strong className="text-sm text-ink">
                       Set {index + 1}
@@ -289,14 +290,14 @@ export function FlexibilityFeature({
                             minutes={p.minutes}
                             seconds={p.seconds}
                             onChange={(v) =>
-                              updateSet(index, {
-                                ...set,
+                              updateSet(index, current=>({
+                                ...current,
                                 durationSeconds: durationToSeconds(
                                   v.hours,
                                   v.minutes,
                                   v.seconds,
                                 ),
-                              })
+                              }))
                             }
                           />
                         </div>
@@ -313,13 +314,13 @@ export function FlexibilityFeature({
                         step="1"
                         value={set.reps ?? ""}
                         onChange={(e) =>
-                          updateSet(index, {
-                            ...set,
+                          updateSet(index, current=>({
+                            ...current,
                             reps:
                               e.target.value === ""
                                 ? undefined
                                 : Number(e.target.value),
-                          })
+                          }))
                         }
                       />
                     </label>
@@ -329,13 +330,7 @@ export function FlexibilityFeature({
               <button
                 className="secondary-button"
                 onClick={() =>
-                  setForm({
-                    ...form,
-                    sets: [
-                      ...form.sets,
-                      nextSet(selected.trackingType, form.sets.length + 1),
-                    ],
-                  })
+                  setForm(current=>current?{...current,sets:[...current.sets,nextSet(selected.trackingType,current.sets.length+1)]}:current)
                 }
               >
                 + Add Set

@@ -30,6 +30,7 @@ import {
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Combobox, Select } from "../../components/SelectionControls";
 import { Pagination } from "../../components/Pagination";
+import { validHistoryPage } from "../../lib/pagedHistory";
 import {
   muscleGroups,
   muscleTags,
@@ -231,12 +232,12 @@ function SetRow({
   set: StrengthSet;
   index: number;
   unit: string;
-  onChange: (s: StrengthSet) => void;
+  onChange: (update:(set:StrengthSet)=>StrengthSet) => void;
   onRemove: () => void;
   onDuplicate: () => void;
 }) {
   const number = (key: keyof StrengthSet, value: string) =>
-    onChange({ ...set, [key]: value === "" ? undefined : Number(value) });
+    onChange(current=>({ ...current, [key]: value === "" ? undefined : Number(value) }));
   return (
     <div className="set-card">
       <div className="flex items-center justify-between">
@@ -311,7 +312,7 @@ function SetRow({
                 (unit) => ({ value: unit, label: unit }),
               )}
               onChange={(distanceUnit) =>
-                onChange({ ...set, distanceUnit: distanceUnit as DistanceUnit })
+                onChange(current=>({ ...current, distanceUnit: distanceUnit as DistanceUnit }))
               }
             />
             <label className="field-label">
@@ -344,7 +345,7 @@ function SetRow({
           <input
             className="field-input"
             value={set.notes ?? ""}
-            onChange={(e) => onChange({ ...set, notes: e.target.value })}
+            onChange={(e) => {const notes=e.target.value;onChange(current=>({ ...current, notes }))}}
           />
         </label>
       </div>
@@ -477,10 +478,10 @@ function WorkoutForm({
                     set={set}
                     index={si}
                     unit={unit}
-                    onChange={(next) =>
+                    onChange={(update) =>
                       updateBlock(bi, block=>({
                         ...block,
-                        sets: block.sets.map((s, i) => (i === si ? next : s)),
+                        sets: block.sets.map((s, i) => (i === si ? update(s) : s)),
                       }))
                     }
                     onRemove={() =>
@@ -1224,7 +1225,7 @@ export function StrengthFeature({
   useEffect(() => {
     queueMicrotask(() => void load());
   }, [load]);
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getStrengthHistoryPage(client,userId,{page:historyPage,search:debouncedHistorySearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none",start:localDateKey(new Date(Date.now()-days*86400000).toISOString())}).then(result=>{if(!active)return;setHistoryItems(result.items);setHistoryTotal(result.total)}).catch(()=>{if(active)setError("Strength history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedHistorySearch,historyLocation,days,loading]);
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getStrengthHistoryPage(client,userId,{page:historyPage,search:debouncedHistorySearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none",start:localDateKey(new Date(Date.now()-days*86400000).toISOString())}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Strength history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedHistorySearch,historyLocation,days,loading]);
   const evidence = useMemo(()=>workouts.flatMap((w)=>w.sets.map((s)=>({...s,performedAt:w.performedAt}))),[workouts]);
   const prMap = useMemo(
     () =>
