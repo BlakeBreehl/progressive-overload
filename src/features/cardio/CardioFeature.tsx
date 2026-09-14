@@ -1,3 +1,4 @@
+import { LocationSelect } from "../../components/LocationSelect";
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -250,7 +251,7 @@ export function CardioFeature({
                 onChange={(e) => {const date=e.target.value;setForm(current=>current?{ ...current, date }:current)}}
               />
             </label>
-            <Select
+            <LocationSelect
               label="Location (optional)"
               value={form.locationId}
               options={[

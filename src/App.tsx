@@ -1,3 +1,6 @@
+import { FeatureBoundary } from "./components/FeatureBoundary";
+import { dataLoadMessage } from "./lib/supabaseError";
+import { ReleaseAnnouncement } from "./components/ReleaseAnnouncement";
 import {
   lazy,
   Suspense,
@@ -19,13 +22,10 @@ import { useAuth } from "./lib/authContext";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import {
   completeOnboarding,
-  loadUserSetup,
   loadUserSetupWithRetry,
   saveModuleSettings,
-  savePreferredWeightUnit,
 } from "./lib/settings";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
-import { Select } from "./components/SelectionControls";
 const LazyStrength = lazy(() =>
     import("./features/strength/StrengthFeature").then((module) => ({
       default: module.StrengthFeature,
@@ -113,7 +113,7 @@ const modules: Record<
     color: "#8f2025",
   },
   weight: {
-    label: "Weight",
+    label: "Bodyweight",
     icon: "scale",
     blurb: "Bodyweight trends",
     color: "#4b4b4b",
@@ -307,7 +307,7 @@ function Home({
           <Icon name="settings" />
         </button>
       </div>
-      <p className="eyebrow">SUNDAY, AUG 30</p>
+      <p className="eyebrow">{new Date().toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</p>
       <h1 className="page-title">
         Hey, athlete <span className="inline-block animate-wave">👋</span>
       </h1>
@@ -350,7 +350,7 @@ function Home({
                     {item.label}
                   </strong>
                   <small className="mt-1 block text-slate-500">
-                    No entries yet
+                    Open module
                   </small>
                 </span>
                 <span className="absolute right-4 top-4 text-slate-600">
@@ -359,44 +359,6 @@ function Home({
               </button>
             );
           })}
-      </div>
-      <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_.7fr]">
-        <div className="surface-card">
-          <div className="flex justify-between">
-            <div>
-              <p className="eyebrow">THIS WEEK</p>
-              <h3 className="mt-1 font-display text-lg font-bold text-ink">
-                Activity
-              </h3>
-            </div>
-            <span className="text-xs text-slate-500">0 entries</span>
-          </div>
-          <div className="mt-7 flex h-24 items-end gap-3">
-            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-              <div key={i} className="flex flex-1 flex-col items-center gap-2">
-                <div
-                  className="w-full rounded-md bg-white/[.04]"
-                  style={{ height: 24 + (i % 3) * 12 }}
-                />
-                <span className="text-[10px] font-bold text-slate-600">
-                  {d}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="surface-card flex items-center gap-4">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red/10 text-red">
-            <Icon name="trophy" />
-          </span>
-          <div>
-            <p className="eyebrow">NEXT MILESTONE</p>
-            <h3 className="mt-1 text-sm font-bold text-ink">
-              Your first logged workout
-            </h3>
-            <p className="mt-1 text-xs text-slate-500">One entry away</p>
-          </div>
-        </div>
       </div>
     </section>
   );
@@ -442,128 +404,6 @@ function EmptyScreen({
             <Icon name="plus" /> Add {item.label} entry
           </button>
         )}
-      </div>
-    </section>
-  );
-}
-
-export function Settings({
-  enabled,
-  change,
-  signOut,
-  home,
-}: {
-  enabled: ModuleState;
-  change: (state: ModuleState) => void;
-  signOut: () => void;
-  home: () => void;
-}) {
-  const auth = useAuth(),
-    [unit, setUnit] = useState<"lb" | "kg">("lb"),
-    open = (
-      screen: "strength" | "cardio" | "flexibility" | "progress" | "weight",
-    ) => {
-      history.pushState({}, "", screenPath(screen));
-      dispatchEvent(new PopStateEvent("popstate"));
-    };
-  useEffect(() => {
-    if (supabase && auth.session)
-      loadUserSetup(supabase, auth.session.user.id)
-        .then((setup) => setUnit(setup.preferredWeightUnit))
-        .catch(() => {});
-  }, [auth.session]);
-  return (
-    <section>
-      <button className="text-button mb-4" onClick={home}>
-        ← Back to Home
-      </button>
-      <p className="eyebrow">MAKE IT YOURS</p>
-      <h1 className="page-title">Settings</h1>
-      <div className="mt-7 max-w-3xl space-y-3">
-        {[
-          [
-            "Locations",
-            "Create, rename, delete, and set defaults in Strength management.",
-            "strength",
-          ],
-          [
-            "Strength Exercises",
-            "Manage names, tracking, groups, muscles, and deletion protection.",
-            "strength",
-          ],
-          [
-            "Cardio Activities",
-            "Create, rename, and delete Cardio activities.",
-            "cardio",
-          ],
-          [
-            "Stretches",
-            "Manage names, body areas, and Time or Reps tracking.",
-            "flexibility",
-          ],
-        ].map(([title, description, screen]) => (
-          <details className="surface-card" key={title}>
-            <summary className="cursor-pointer font-bold text-ink">
-              {title}
-            </summary>
-            <p className="mt-2 text-sm text-slate-500">{description}</p>
-            <button
-              className="secondary-button mt-3"
-              onClick={() =>
-                open(screen as "strength" | "cardio" | "flexibility")
-              }
-            >
-              Open {title}
-            </button>
-          </details>
-        ))}
-        <details className="surface-card">
-          <summary className="cursor-pointer font-bold text-ink">
-            Preferred units
-          </summary>
-          <p className="mt-2 text-sm text-slate-500">
-            This preference applies to future entries and screens that request a
-            default. Existing records retain their stored numbers and units;
-            they are never silently reinterpreted.
-          </p>
-          <Select className="mt-3" label="Preferred weight unit" value={unit} options={[{value:"lb",label:"Pounds (lb)"},{value:"kg",label:"Kilograms (kg)"}]} onChange={async next=>{if(next===unit)return;if(supabase&&auth.session){await savePreferredWeightUnit(supabase,auth.session.user.id,next as "lb"|"kg");setUnit(next as "lb"|"kg")}}}/>
-        </details>
-        <details className="surface-card">
-          <summary className="cursor-pointer font-bold text-ink">
-            Module visibility
-          </summary>
-          <p className="mt-2 text-sm text-slate-500">
-            Choose what appears in navigation and the Add menu. Hiding a module
-            never deletes its history.
-          </p>
-          <div className="mt-3 divide-y divide-slate-200">
-            {(Object.keys(modules) as ModuleKey[]).map((key) => (
-              <div className="flex items-center gap-3 py-3" key={key}>
-                <span className="flex-1 font-bold text-ink">
-                  {modules[key].label}
-                </span>
-                <button
-                  role="switch"
-                  aria-checked={enabled[key]}
-                  aria-label={`Enable ${modules[key].label}`}
-                  onClick={() => change({ ...enabled, [key]: !enabled[key] })}
-                  className={`toggle ${enabled[key] ? "toggle-on" : ""}`}
-                >
-                  <span />
-                </button>
-              </div>
-            ))}
-          </div>
-        </details>
-        <div className="surface-card flex items-center justify-between text-sm">
-          <div>
-            <span className="block text-slate-500">Progressive Overload</span>
-            <span className="text-xs text-slate-500">Predeployment build</span>
-          </div>
-          <button className="secondary-button" onClick={signOut}>
-            Sign out
-          </button>
-        </div>
       </div>
     </section>
   );
@@ -648,6 +488,7 @@ function App() {
   const [enabled, setEnabled] = useState<ModuleState>(defaultModules),
     [loadedUserId, setLoadedUserId] = useState<string | null>(null),
     [setupError, setSetupError] = useState(""),
+    [setupAttempt,setSetupAttempt]=useState(0),
     [weightUnit, setWeightUnit] = useState<"lb" | "kg">("lb");
   useEffect(() => {
     const update = (event: Event) =>
@@ -655,10 +496,11 @@ function App() {
     addEventListener("preferred-weight-unit", update);
     return () => removeEventListener("preferred-weight-unit", update);
   }, []);
+  const setupUserId=auth.session?.user.id;
   useEffect(() => {
-    if (!auth.session || !supabase) return;
+    if (!setupUserId || !supabase) return;
     let active = true;
-    const userId = auth.session.user.id;
+    const userId = setupUserId;
     queueMicrotask(()=>{if(active){setLoadedUserId(null);setSetupError("")}});
     loadUserSetupWithRetry(supabase, userId)
       .then((setup) => {
@@ -669,11 +511,9 @@ function App() {
           setSetupError("");
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (active)
-          setSetupError(
-            "Could not load your settings. Please refresh and try again.",
-          );
+          setSetupError(dataLoadMessage("Account setup",error));
       })
       .finally(() => {
         if (active) setLoadedUserId(userId);
@@ -681,7 +521,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [auth.session]);
+  }, [setupUserId,setupAttempt]);
   const nav = useMemo(
     () => [
       { key: "home" as Screen, label: "Home", icon: "home" },
@@ -745,6 +585,7 @@ function App() {
   if (authView === "loading")
     return (
       <main className="onboarding-shell">
+        {auth.error&&<div role="alert"><p>{auth.error}</p><button className="primary-button" onClick={auth.retry}>Retry</button></div>}
         <p className="eyebrow">LOADING PROGRESSIVE OVERLOAD…</p>
       </main>
     );
@@ -756,7 +597,7 @@ function App() {
           <h1 className="font-display text-2xl font-black text-ink">
             We hit a snag
           </h1>
-          <p className="mt-3 text-sm text-slate-400">{setupError}</p>
+          <p className="mt-3 text-sm text-slate-400">{setupError}</p><button className="primary-button mt-4" onClick={()=>setSetupAttempt(value=>value+1)}>Retry</button>
         </div>
       </main>
     );
@@ -780,7 +621,8 @@ function App() {
       );
   };
   return (
-    <div className="min-h-screen bg-white text-slate-700">
+    <div className="app-frame min-h-screen bg-white text-slate-700">
+      {supabase&&auth.session&&<ReleaseAnnouncement key={auth.session.user.id} client={supabase} userId={auth.session.user.id} ready={loadedUserId===auth.session.user.id&&!setupError}/>}
       <aside className="sidebar">
         <Logo />
         <nav className="mt-10 flex flex-col gap-1">
@@ -812,7 +654,7 @@ function App() {
           <Icon name="settings" />
         </button>
       </header>
-      <main className="content">
+      <main className="content"><FeatureBoundary key={`${auth.session?.user.id}:${screen}`}>
         {screen === "home" ? (
           <Home
             enabled={enabled}
@@ -867,20 +709,7 @@ function App() {
         ) : (
           <EmptyScreen screen={screen as Exclude<Screen,"home"|"settings">} add={() => setAddOpen(true)} />
         )}
-      </main>
-      {screen !== "progress" && screen !== "settings" && !route.creating && (
-        <button
-          className="floating-add"
-          onClick={() =>
-            screen === "home"
-              ? setAddOpen(true)
-              : triggerAdd(screen as ModuleKey)
-          }
-        >
-          <Icon name="plus" size={25} />
-          <span>Add</span>
-        </button>
-      )}
+      </FeatureBoundary></main>
       <nav className="bottom-nav">
         {nav.map((item) => (
           <button

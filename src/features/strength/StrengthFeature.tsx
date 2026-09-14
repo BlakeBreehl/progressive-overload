@@ -1,8 +1,10 @@
+import { YourSets } from "./YourSets";
+import { LocationSelect } from "../../components/LocationSelect";
+import { loadStrengthProgressRows, strengthPrEvidence } from "../progress/repository";
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  chooseDefaultLocation,
   detectRepetitionPrs,
   filterExercises,
   groupDailyStrength,
@@ -21,9 +23,7 @@ import {
   getWorkouts,
   getWorkoutById,
   saveExercise,
-  saveLocation,
   saveWorkout,
-  setDefaultLocation,
   strengthLoadMessage,
   type ExerciseInput,
 } from "./repository";
@@ -61,7 +61,6 @@ type View =
   | "form"
   | "history"
   | "exercises"
-  | "locations"
   | "detail";
 const today = () => {
   const d = new Date();
@@ -131,7 +130,7 @@ function PrBadges({ kinds }: { kinds: string[] }) {
   return (
     <span className="inline-flex flex-wrap gap-1">
       {kinds.includes("first") && (
-        <span className="pr-first">First record</span>
+        <span className="pr-first">First Entry</span>
       )}
       {kinds.includes("weight") && <span className="pr-weight">Weight PR</span>}
       {kinds.includes("reps") && <span className="pr-reps">Rep PR</span>}
@@ -395,7 +394,7 @@ function WorkoutForm({
             onChange={(e) => {const date=e.target.value;setDraft(current=>({ ...current, date }))}}
           />
         </label>
-        <Select
+        <LocationSelect
           label="Location"
           value={draft.locationId ?? ""}
           options={[
@@ -431,7 +430,7 @@ function WorkoutForm({
           value={
             draft.durationSeconds === undefined
               ? ""
-              : Math.round(draft.durationSeconds / 60)
+              : draft.durationSeconds / 60
           }
           onChange={(e) =>
             setDraft(current=>({
@@ -889,108 +888,6 @@ function ExerciseEditor({
   );
 }
 
-function LocationManager({
-  client,
-  locations,
-  userId,
-  reload,
-}: {
-  client: SupabaseClient;
-  locations: Location[];
-  userId: string;
-  reload: () => void;
-}) {
-  const [name, setName] = useState(""),
-    [editing, setEditing] = useState<Location | null>(null),
-    [error, setError] = useState("");
-  const save = async () => {
-    if (!name.trim()) return;
-    try {
-      await saveLocation(client, userId, name, editing?.id);
-      setName("");
-      setEditing(null);
-      reload();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not save location.",
-      );
-    }
-  };
-  return (
-    <section>
-      <p className="eyebrow">STRENGTH</p>
-      <h1 className="page-title">Locations</h1>
-      <div className="surface-card mt-6">
-        <label className="field-label">
-          {editing ? "Edit location" : "New location"}
-          <input
-            className="field-input"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Home gym"
-          />
-        </label>
-        <div className="mt-3 flex gap-2">
-          <button className="primary-button" onClick={save}>
-            {editing ? "Save name" : "Add location"}
-          </button>
-          {editing && (
-            <button
-              className="secondary-button"
-              onClick={() => {
-                setEditing(null);
-                setName("");
-              }}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-        {error && <p className="mt-3 text-sm text-red">{error}</p>}
-      </div>
-      <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
-        {locations.map((location) => (
-          <div
-            className="flex min-h-14 items-center gap-2 py-2"
-            key={location.id}
-          >
-            <div className="min-w-0 flex-1">
-              <strong className="text-ink">{location.name}</strong>
-              {location.isDefault && <span className="tag ml-2">Default</span>}
-            </div>
-            {!location.isDefault && (
-              <button
-                className="text-button"
-                onClick={async () => {
-                  chooseDefaultLocation(locations, location.id);
-                  await setDefaultLocation(client, userId, location.id);
-                  reload();
-                }}
-              >
-                Make default
-              </button>
-            )}
-            <button
-              className="icon-button"
-              aria-label={`Edit ${location.name}`}
-              title="Edit"
-              onClick={() => {
-                setEditing(location);
-                setName(location.name);
-              }}
-            >
-              ✎
-            </button>
-          </div>
-        ))}
-        {!locations.length && (
-          <p className="py-4 text-sm text-slate-500">No locations yet.</p>
-        )}
-      </div>
-    </section>
-  );
-}
-
 function HistoryList({
   workouts,
   unit,
@@ -1036,7 +933,7 @@ function HistoryList({
             result =
               group.sets.length === 1
                 ? group.sets[0].trackingType === "repetitions"
-                  ? `${group.sets[0].weight} ${unit} × ${group.sets[0].reps}`
+                  ? group.sets[0].weight===undefined?`${group.sets[0].reps} reps`:`${group.sets[0].weight} ${unit} x ${group.sets[0].reps}`
                   : `${group.sets[0].distance} ${group.sets[0].distanceUnit}`
                 : `${group.sets.length} sets`,
             displayDate = new Date(`${group.date}T12:00:00`).toLocaleDateString(
@@ -1193,17 +1090,19 @@ export function StrengthFeature({
     [editor, setEditor] = useState<{ name: string } | null>(null),
     [successId, setSuccessId] = useState<string | null>(null),
     [savedWorkout,setSavedWorkout]=useState<Workout|null>(null),
-    [days, setDays] = useState(30),
+    [days, setDays] = useState(0),
     [historySearch, setHistorySearch] = useState(""),
     [historyLocation, setHistoryLocation] = useState("all"),
     [historyPage, setHistoryPage] = useState(1);
   const [historyItems,setHistoryItems]=useState<Workout[]>([]),[historyTotal,setHistoryTotal]=useState(0),[historyLoading,setHistoryLoading]=useState(false),[debouncedHistorySearch,setDebouncedHistorySearch]=useState("");
   useEffect(()=>{const timer=setTimeout(()=>setDebouncedHistorySearch(historySearch),250);return()=>clearTimeout(timer)},[historySearch]);
+  const [evidence,setEvidence]=useState<ReturnType<typeof strengthPrEvidence>>([]);
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       setExercises(await getExercises(client, userId));
+      setEvidence(strengthPrEvidence(await loadStrengthProgressRows(client,userId)));
       const [l, w] = await Promise.allSettled([
         getLocations(client, userId),
         getWorkouts(client, userId),
@@ -1225,8 +1124,7 @@ export function StrengthFeature({
   useEffect(() => {
     queueMicrotask(() => void load());
   }, [load]);
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getStrengthHistoryPage(client,userId,{page:historyPage,search:debouncedHistorySearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none",start:localDateKey(new Date(Date.now()-days*86400000).toISOString())}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Strength history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedHistorySearch,historyLocation,days,loading]);
-  const evidence = useMemo(()=>workouts.flatMap((w)=>w.sets.map((s)=>({...s,performedAt:w.performedAt}))),[workouts]);
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getStrengthHistoryPage(client,userId,{page:historyPage,search:debouncedHistorySearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none",start:days?localDateKey(new Date(Date.now()-days*86400000).toISOString()):undefined}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Strength history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedHistorySearch,historyLocation,days,loading]);
   const prMap = useMemo(
     () =>
       new Map(detectRepetitionPrs(evidence).map((p) => [p.setKey, p.kinds])),
@@ -1266,6 +1164,7 @@ export function StrengthFeature({
     const grouped = groupBy(w.sets, (s) => s.exerciseId);
     setDraft({
       id: w.id,
+      originalPerformedAt:w.performedAt,
       date: localDateKey(w.performedAt),
       locationId: w.location?.id ?? null,
       notes: w.notes ?? "",
@@ -1445,20 +1344,6 @@ export function StrengthFeature({
         />
       </>
     );
-  if (view === "locations")
-    return (
-      <>
-        <button className="text-button mb-4" onClick={() => setView("hub")}>
-          ← Strength home
-        </button>
-        <LocationManager
-          client={client}
-          locations={locations}
-          userId={userId}
-          reload={load}
-        />
-      </>
-    );
   if (view === "history")
     return (
       <section>
@@ -1475,6 +1360,7 @@ export function StrengthFeature({
             className="w-auto"
             value={String(days)}
             options={[
+              { value: "0", label: "All Time" },
               { value: "30", label: "Past month" },
               { value: "90", label: "Past 3 months" },
               { value: "365", label: "Past year" },
@@ -1558,6 +1444,7 @@ export function StrengthFeature({
           + Log Lift
         </button>
       </div>
+      <YourSets client={client} userId={userId} />
       <div className="mt-7 grid gap-3 sm:grid-cols-3">
         <button
           className="module-card min-h-32 text-left"
@@ -1570,20 +1457,11 @@ export function StrengthFeature({
         </button>
         <button
           className="module-card min-h-32 text-left"
-          onClick={() => setView("locations")}
-        >
-          <strong className="text-ink">Locations</strong>
-          <p className="mt-2 text-xs text-slate-500">
-            Manage gyms and defaults
-          </p>
-        </button>
-        <button
-          className="module-card min-h-32 text-left"
           onClick={() => setView("history")}
         >
           <strong className="text-ink">Strength History</strong>
           <p className="mt-2 text-xs text-slate-500">
-            Past month and actual PRs
+            All-time history and actual PRs
           </p>
         </button>
       </div>

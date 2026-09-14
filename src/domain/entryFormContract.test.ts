@@ -22,7 +22,6 @@ describe('create-entry rendering contract', () => {
     const source=compact(app);expect(source).toContain('createPath(next.screenasModuleKey)')
     expect(source).toContain("navigate({screen:key,creating:true")
     expect(source).toContain('pick={triggerAdd}')
-    expect(source).toContain("screen!=='progress'&&screen!=='settings'&&!route.creating")
   })
 
   it('uses the dedicated Home logging treatment', () => {

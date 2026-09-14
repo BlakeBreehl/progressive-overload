@@ -1,3 +1,7 @@
+import { formatMetric } from "../../lib/metricTicks";
+import { bodyweightChart, defaultLineStyle, lineType, type LineStyle } from "./chart";
+import { readingChanges } from "./readingChanges";
+import { niceAxis } from "../../lib/niceAxis";
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -9,12 +13,11 @@ import {
   ResponsiveContainer,
   Tooltip,
   YAxis,
+  Legend,
 } from "recharts";
 import {
-  customComparison,
   filterReadings,
   monthlyComparison,
-  summary,
   weeklyComparison,
   type Comparison,
   type Reading,
@@ -38,6 +41,8 @@ import { TimeXAxis } from "../../components/TimeXAxis";
 import { fullLocalDateLabel } from "../../lib/timeAxis";
 type Form = {
   id?: string;
+  unit?: "lb" | "kg";
+  originalMeasuredAt?: string;
   date: string;
   time: string;
   period: "morning" | "evening";
@@ -52,22 +57,6 @@ const blank = (): Form => ({
   weight: "",
   notes: "",
 });
-const Card = ({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value?: number;
-  unit: string;
-}) => (
-  <div className="surface-card">
-    <p className="eyebrow">{label}</p>
-    <strong className="mt-1 block text-xl text-ink">
-      {value === undefined ? "—" : `${value.toFixed(1)} ${unit}`}
-    </strong>
-  </div>
-);
 const ComparisonCard = ({
   title,
   value,
@@ -112,6 +101,8 @@ export function WeightFeature({
   create?: boolean;
   onExitCreate?: (saved?: boolean) => void;
 }) {
+  const [style,setStyle]=useState<LineStyle>(defaultLineStyle);
+  const [graphUnit,setGraphUnit]=useState(unit);
   const [items, setItems] = useState<WeighIn[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -126,12 +117,12 @@ export function WeightFeature({
     [historyPage,setHistoryPage]=useState(1),
     [historyItems,setHistoryItems]=useState<WeighIn[]>([]),
     [historyTotal,setHistoryTotal]=useState(0),
-    [historyLoading,setHistoryLoading]=useState(false);
+    [historyLoading,setHistoryLoading]=useState(false),[revision,setRevision]=useState(0);
   const [weightAxes,setWeightAxes]=useState<AxisSettings>({...defaultAxisSettings,range:"3m"}),[changeAxes,setChangeAxes]=useState(defaultAxisSettings),[changeAggregation,setChangeAggregation]=useState<"weekly"|"monthly">("weekly");
   const load = useCallback(async () => {
     try {
-      const from=new Date();if(range==="3m")from.setMonth(from.getMonth()-3);if(range==="6m")from.setMonth(from.getMonth()-6);
-      setItems(await loadWeighIns(client,userId,{start:range==="all"?undefined:range==="custom"?start:localDateKey(from.toISOString()),end:range==="custom"?end:undefined,period}));
+      // Chart snapshots include comparison evidence outside the visible history page.
+      setItems(await loadWeighIns(client,userId));
       setError("");
     } catch (e) {
       console.error("Weight load failed", e);
@@ -141,7 +132,7 @@ export function WeightFeature({
     } finally {
       setLoading(false);
     }
-  }, [client, userId, range, start, end, period]);
+  }, [client, userId]);
   useEffect(() => {
     queueMicrotask(() => void load());
   }, [load]);
@@ -164,20 +155,11 @@ export function WeightFeature({
     };
   }, [range, start, end]);
   const visible = filterReadings(items, dates.start, dates.end, period),
-    stats = summary(visible);
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getWeightHistoryPage(client,userId,{page:historyPage,period,start:dates.start,end:dates.end}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Bodyweight history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,period,dates.start,dates.end,loading]);
+    displayUnit = form?.unit ?? unit;
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getWeightHistoryPage(client,userId,{page:historyPage,period,start:dates.start,end:dates.end}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Bodyweight history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,period,dates.start,dates.end,loading,revision]);
+  const weeklyReadings=readingChanges([...items,...historyItems]);
   const historyResults = {items:historyItems,total:historyTotal,page:historyPage,pages:Math.max(1,Math.ceil(historyTotal/20)),start:historyTotal?(historyPage-1)*20+1:0,end:Math.min(historyPage*20,historyTotal)};
-  const axisDates=rangeDates(weightAxes),axisVisible=filterReadings(items,axisDates.start,axisDates.end,period),chart = [...new Set(axisVisible.map((x) => x.measuredAt.slice(0, 10)))]
-    .sort()
-    .map((date) => ({
-      date,
-      morning: visible.find(
-        (x) => x.measuredAt.slice(0, 10) === date && x.period === "morning",
-      )?.weight,
-      evening: visible.find(
-        (x) => x.measuredAt.slice(0, 10) === date && x.period === "evening",
-      )?.weight,
-    })),changeReadings=filterReadings(items,rangeDates(changeAxes).start,rangeDates(changeAxes).end,period),weeklyCalendar=calendarChanges(changeReadings,"weekly",period),monthlyCalendar=calendarChanges(changeReadings,"monthly",period),changes=changeAggregation==="weekly"?weeklyCalendar:monthlyCalendar,latestChange=changes.at(-1),latestWeek=weeklyCalendar.at(-1),latestMonth=monthlyCalendar.at(-1),weightDomain=paddedDomain(axisVisible.map(item=>item.weight),weightAxes),absoluteDomain=paddedDomain(changes.flatMap(item=>item.change===null?[]:[item.change]),changeAxes),percentDomain=paddedDomain(changes.flatMap(item=>item.percentChange===null?[]:[item.percentChange]),changeAxes);
+  const axisVisible=visible.filter(item=>item.unit===graphUnit),chart = bodyweightChart(axisVisible),changeReadings=filterReadings(items.filter(item=>item.unit===graphUnit),rangeDates(changeAxes).start,rangeDates(changeAxes).end,period),weeklyCalendar=calendarChanges(changeReadings,"weekly",period),monthlyCalendar=calendarChanges(changeReadings,"monthly",period),changes=changeAggregation==="weekly"?weeklyCalendar:monthlyCalendar,weightDomain=paddedDomain(axisVisible.map(item=>item.weight),weightAxes,5),absoluteDomain=paddedDomain([0,...changes.flatMap(item=>item.change===null?[]:[item.change])],changeAxes),percentDomain=paddedDomain([0,...changes.flatMap(item=>item.percentChange===null?[]:[item.percentChange])],changeAxes);
   const save = async () => {
     if (!form||saving) return;
     const weight = Number(form.weight);
@@ -186,9 +168,11 @@ export function WeightFeature({
       return;
     }
     setSaving(true);try {
-      const measured = new Date(
+      const entered = new Date(
         `${form.date}T${form.time || "12:00"}:00`,
       ).toISOString();
+      const original=form.originalMeasuredAt;
+      const measured=original&&localDateKey(original)===form.date&&new Date(original).toTimeString().slice(0,5)===form.time?original:entered;
       const saved={...form},id=await saveWeighIn(
         client,
         userId,
@@ -196,13 +180,13 @@ export function WeightFeature({
           measured_at: measured,
           period: form.period,
           weight,
-          weight_unit: unit,
+          weight_unit: form.unit ?? unit,
           notes: form.notes || null,
         },
         form.id,
       );
       setSuccess({id,form:saved});setForm(null);
-      await load();
+      await load();setRevision(value=>value+1);
       onExitCreate(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save weigh-in.");
@@ -212,10 +196,10 @@ export function WeightFeature({
   if(success&&!form)return <section className="mx-auto max-w-xl"><p className="eyebrow">BODYWEIGHT SAVED</p><h1 className="page-title">Entry saved.</h1><div className="surface-card mt-6"><strong>{success.form.weight} {unit}</strong><p className="mt-2 text-sm text-slate-600">{success.form.period==="morning"?"Morning":"Evening"} · {success.form.date}</p></div><EntrySuccessActions onAnother={()=>{setSuccess(null);setForm(blank())}} onEdit={()=>setForm({...success.form,id:success.id})} onDone={()=>setSuccess(null)}/></section>;
   return (
     <section>
-      <div className="flex items-end justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">BODYWEIGHT</p>
-          <h1 className="page-title">Weight</h1>
+          <h1 className="page-title">Bodyweight</h1>
         </div>
         <button className="primary-button" onClick={() => setForm(blank())}>
           + Add Bodyweight Entry
@@ -236,7 +220,7 @@ export function WeightFeature({
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="field-label">
-              Weight ({unit})
+              Weight ({displayUnit})
               <input
                 autoFocus
                 className="field-input"
@@ -333,80 +317,62 @@ export function WeightFeature({
           </label>
         </div>
       )}
-      <div className="surface-card mt-5 h-80">
-        <ChartControls settings={weightAxes} setSettings={setWeightAxes} unit={unit} />
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="surface-card mt-5">
+        <Select label="Chart weight unit" value={graphUnit} options={[{value:"lb",label:"Pounds (lb)"},{value:"kg",label:"Kilograms (kg)"}]} onChange={value=>setGraphUnit(value as "lb"|"kg")} />
+        <ChartControls settings={weightAxes} setSettings={setWeightAxes} unit={graphUnit} showRange={false}><Select label="Line Style" value={style} options={[{value:"straight",label:"Straight"},{value:"smooth",label:"Smooth"}]} onChange={value=>setStyle(value as LineStyle)} /></ChartControls>
+        <ResponsiveContainer width="100%" height={280}>
           <LineChart
             data={chart}
             margin={{ top: 10, right: 12, left: -15, bottom: 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#ddd" />
             <TimeXAxis dates={chart.map(point=>point.date)} />
-            <YAxis domain={weightDomain} unit={` ${unit}`} tick={{ fontSize: 10 }} />
+            <Legend />
+            <YAxis type="number" ticks={!weightAxes.min&&!weightAxes.max?niceAxis(axisVisible.map(item=>item.weight),5).ticks:undefined} domain={weightDomain} unit={` ${graphUnit}`} tick={{ fontSize: 10 }} />
             <Tooltip
               labelFormatter={label=>fullLocalDateLabel(String(label))}
               formatter={(value, name) => [
-                `${Number(value).toFixed(1)} ${unit}`,
-                name === "morning" ? "Morning" : "Evening",
+                `${value} ${graphUnit}`,
+                name === "Morning" ? "Morning" : "Evening",
               ]}
             />
             <Line
-              connectNulls={false}
-              type="monotone"
+              connectNulls
+              type={lineType(style)}
               dataKey="morning"
               name="Morning"
               stroke="#D71920"
-              strokeWidth={3}
-              dot={{ r: 4 }}
+              strokeWidth={1.5}
+              dot={false}
             />
             <Line
-              connectNulls={false}
-              type="monotone"
+              connectNulls
+              type={lineType(style)}
               dataKey="evening"
               name="Evening"
               stroke="#111"
-              strokeDasharray="6 4"
-              strokeWidth={2}
-              dot={{ r: 3, fill: "#fff" }}
+              strokeWidth={1.5}
+              dot={false}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
       <section className="mt-8 space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">CALENDAR COMPARISONS</p><h2 className="font-display text-xl font-bold text-ink">Bodyweight Change</h2></div><Select label="Aggregation" value={changeAggregation} options={[{value:"weekly",label:"Weekly"},{value:"monthly",label:"Monthly"}]} onChange={value=>setChangeAggregation(value as typeof changeAggregation)}/></div>
-        <div className="grid gap-3 lg:grid-cols-2"><div className="surface-card"><h3 className="font-display font-bold text-ink">Calendar Week-over-Week</h3><div className="mt-3 grid gap-2 sm:grid-cols-3"><Card label="Latest weekly average" value={latestWeek?.average} unit={unit}/><Card label="Previous-week change" value={latestWeek?.change??undefined} unit={unit}/><Card label="Percent change" value={latestWeek?.percentChange??undefined} unit="%"/></div>{latestWeek?.partial&&<p className="mt-2 text-xs text-slate-500">Current week is partial.</p>}</div><div className="surface-card"><h3 className="font-display font-bold text-ink">Calendar Month-over-Month</h3><div className="mt-3 grid gap-2 sm:grid-cols-3"><Card label="Latest monthly average" value={latestMonth?.average} unit={unit}/><Card label="Previous-month change" value={latestMonth?.change??undefined} unit={unit}/><Card label="Percent change" value={latestMonth?.percentChange??undefined} unit="%"/></div>{latestMonth?.partial&&<p className="mt-2 text-xs text-slate-500">Current month is partial.</p>}</div></div>
-        <ChartControls settings={changeAxes} setSettings={setChangeAxes} unit={`${unit} / %`} />
-        <div className="grid gap-3 sm:grid-cols-3"><Card label={`Latest ${changeAggregation} average`} value={latestChange?.average} unit={unit}/><Card label="Change from previous" value={latestChange?.change??undefined} unit={unit}/><Card label="Percent change" value={latestChange?.percentChange??undefined} unit="%"/></div>
+        <ChartControls settings={changeAxes} setSettings={setChangeAxes} unit={`${graphUnit} / %`} />
         <p className="text-xs text-slate-500">Daily readings are averaged once per calendar day. Missing days are ignored. A previous adjacent period is required for change.</p>
-        <div className="grid gap-4 lg:grid-cols-2"><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Absolute Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis domain={absoluteDomain} unit={` ${unit}`}/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={unit}/>:null}/><Line dataKey="change" stroke="#d71920" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Percent Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis domain={percentDomain} unit="%"/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={unit}/>:null}/><Line dataKey="percentChange" stroke="#111" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div></div>
+        <div className="grid gap-4 lg:grid-cols-2"><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Absolute Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis tickFormatter={value=>formatMetric(Number(value),"distance")} domain={absoluteDomain} unit={` ${graphUnit}`}/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={graphUnit}/>:null}/><Line type={lineType(style)} dot={false} dataKey="change" stroke="#d71920" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Percent Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis tickFormatter={value=>formatMetric(Number(value),"percentage")} domain={percentDomain}/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={graphUnit}/>:null}/><Line type={lineType(style)} dot={false} dataKey="percentChange" stroke="#111" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div></div>
       </section>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Card label="Latest Morning" value={stats?.latestMorning} unit={unit} />
-        <Card label="Latest Evening" value={stats?.latestEvening} unit={unit} />
-        <Card label="Average" value={stats?.average} unit={unit} />
-        <Card label="Highest" value={stats?.highest} unit={unit} />
-        <Card label="Lowest" value={stats?.lowest} unit={unit} />
-        <Card label="Range Change" value={stats?.change} unit={unit} />
-      </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <ComparisonCard
           title="Week to week"
-          value={weeklyComparison(visible)}
-          unit={unit}
+          value={weeklyComparison(axisVisible)}
+          unit={graphUnit}
         />
         <ComparisonCard
           title="Month to month"
-          value={monthlyComparison(visible)}
-          unit={unit}
-        />
-        <ComparisonCard
-          title="Selected period"
-          value={
-            dates.start && dates.end
-              ? customComparison(visible, dates.start, dates.end)
-              : null
-          }
-          unit={unit}
+          value={monthlyComparison(axisVisible)}
+          unit={graphUnit}
         />
       </div>
       <h2 className="mt-8 font-display text-xl font-bold text-ink">
@@ -415,7 +381,7 @@ export function WeightFeature({
       <div className="mt-3 space-y-2">
         {historyLoading ? <div className="empty-card">Loading matching readings…</div> : historyResults.items.map((x) => (
           <div
-            className="surface-card flex items-center justify-between"
+            className="flex items-center justify-between gap-2 border-b border-slate-200 py-2"
             key={x.id}
           >
             <div>
@@ -425,6 +391,7 @@ export function WeightFeature({
               <p className="text-xs capitalize text-slate-500">
                 {new Date(x.measuredAt).toLocaleString()} · {x.period}
               </p>
+              <p className="text-xs text-slate-600">{weeklyReadings.get(x.id) ? `Week: ${weeklyReadings.get(x.id)!.absolute>=0?"+":""}${Number(weeklyReadings.get(x.id)!.absolute.toFixed(4))} ${x.unit} (${weeklyReadings.get(x.id)!.percent>=0?"+":""}${weeklyReadings.get(x.id)!.percent.toFixed(2)}%)` : "Week: insufficient comparable data"}</p>
               {x.notes && <p className="text-sm text-slate-600">{x.notes}</p>}
             </div>
             <div>
@@ -433,6 +400,8 @@ export function WeightFeature({
                 onClick={() =>
                   setForm({
                     id: x.id,
+                    unit: x.unit,
+                    originalMeasuredAt:x.measuredAt,
                     date: localDateKey(x.measuredAt),
                     time: new Date(x.measuredAt).toTimeString().slice(0, 5),
                     period: x.period,
@@ -455,7 +424,7 @@ export function WeightFeature({
         {!visible.length && (
           <div className="empty-card">No readings in this range.</div>
         )}
-      </div><Pagination {...historyResults} onChange={setHistoryPage} /><ConfirmDialog open={!!deleteTarget} title="Delete this weigh-in?" description="This permanently removes the selected bodyweight reading and recalculates graphs and statistics." confirmLabel="Delete Weigh-in" busy={deleting} error={error} onCancel={()=>{setDeleteTarget(null);setError("")}} onConfirm={async()=>{if(!deleteTarget)return;setDeleting(true);try{await deleteWeighIn(client,userId,deleteTarget.id);setDeleteTarget(null);await load()}catch{setError("Could not delete this weigh-in. It is unchanged; try again.")}finally{setDeleting(false)}}}>{deleteTarget&&<><strong>{deleteTarget.weight} {deleteTarget.unit}</strong><p className="capitalize text-slate-500">{new Date(deleteTarget.measuredAt).toLocaleString()} · {deleteTarget.period}</p></>}</ConfirmDialog>
+      </div><Pagination {...historyResults} onChange={setHistoryPage} /><ConfirmDialog open={!!deleteTarget} title="Delete this weigh-in?" description="This permanently removes the selected bodyweight reading and recalculates graphs and statistics." confirmLabel="Delete Weigh-in" busy={deleting} error={error} onCancel={()=>{setDeleteTarget(null);setError("")}} onConfirm={async()=>{if(!deleteTarget)return;setDeleting(true);try{await deleteWeighIn(client,userId,deleteTarget.id);setDeleteTarget(null);await load();setRevision(value=>value+1)}catch{setError("Could not delete this weigh-in. It is unchanged; try again.")}finally{setDeleting(false)}}}>{deleteTarget&&<><strong>{deleteTarget.weight} {deleteTarget.unit}</strong><p className="capitalize text-slate-500">{new Date(deleteTarget.measuredAt).toLocaleString()} · {deleteTarget.period}</p></>}</ConfirmDialog>
     </section>
   );
 }

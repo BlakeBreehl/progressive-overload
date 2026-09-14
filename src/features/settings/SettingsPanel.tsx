@@ -34,7 +34,7 @@ const moduleInfo: Record<
     color: "#8f2025",
   },
   weight: {
-    label: "Weight",
+    label: "Bodyweight",
     description: "Morning and evening bodyweight trends",
     symbol: "○",
     color: "#555555",
@@ -62,6 +62,7 @@ export function SettingsPanel({
   signOut: () => void;
   home: () => void;
 }) {
+  const [locationSearch,setLocationSearch]=useState("");
   const [locations, setLocations] = useState<Location[]>([]),
     [locationName, setLocationName] = useState(""),
     [editing, setEditing] = useState<Location | null>(null),
@@ -188,8 +189,9 @@ export function SettingsPanel({
                 {error}
               </p>
             )}
+            <input className="field-input mt-4" aria-label="Search locations" placeholder="Search locations" value={locationSearch} onChange={event=>setLocationSearch(event.target.value)} />
             <div className="mt-4 divide-y divide-slate-200">
-              {locations.map((location) => (
+              {locations.filter(location=>location.name.toLocaleLowerCase().includes(locationSearch.trim().toLocaleLowerCase())).map((location) => (
                 <div
                   className="flex min-h-14 items-center gap-2 py-2"
                   key={location.id}

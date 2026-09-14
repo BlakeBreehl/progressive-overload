@@ -13,7 +13,25 @@ export function validateWorkout(draft:WorkoutDraft){const errors:string[]=[];if(
 export function localDateToIso(date:string, now=new Date()){const [y,m,d]=date.split('-').map(Number);const local=new Date(y,m-1,d,now.getHours(),now.getMinutes(),now.getSeconds());return local.toISOString()}
 export function localDateKey(iso:string){const d=new Date(iso);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 export type DailyStrengthGroup={date:string;exerciseId:string;exerciseName:string;locationId:string|null;locationName:string|null;workouts:string[];sets:(StrengthSet&{exercise:Exercise})[]}
-export function groupDailyStrength(workouts:import('./types').Workout[]):DailyStrengthGroup[]{const groups:DailyStrengthGroup[]=[];for(const workout of workouts){const byExercise=new Map<string,DailyStrengthGroup>();for(const set of workout.sets){const current=byExercise.get(set.exerciseId)??{date:localDateKey(workout.performedAt),exerciseId:set.exerciseId,exerciseName:set.exercise.name,locationId:workout.location?.id??null,locationName:workout.location?.name??null,workouts:[workout.id],sets:[]};current.sets.push(set);byExercise.set(set.exerciseId,current)}groups.push(...byExercise.values())}return groups.map(group=>({...group,sets:group.sets.sort((a,b)=>a.setOrder-b.setOrder)})).sort((a,b)=>b.date.localeCompare(a.date)||a.exerciseName.localeCompare(b.exerciseName)||a.workouts[0].localeCompare(b.workouts[0]))}
+export function groupDailyStrength(workouts:import('./types').Workout[]):DailyStrengthGroup[]{const groups:DailyStrengthGroup[]=[];for(const workout of [...workouts].sort((a,b)=>b.performedAt.localeCompare(a.performedAt)||(b.createdAt??'').localeCompare(a.createdAt??'')||b.id.localeCompare(a.id))){const byExercise=new Map<string,DailyStrengthGroup>();for(const set of workout.sets){const current=byExercise.get(set.exerciseId)??{date:localDateKey(workout.performedAt),exerciseId:set.exerciseId,exerciseName:set.exercise.name,locationId:workout.location?.id??null,locationName:workout.location?.name??null,workouts:[workout.id],sets:[]};current.sets.push(set);byExercise.set(set.exerciseId,current)}groups.push(...byExercise.values())}return groups.map(group=>({...group,sets:group.sets.sort((a,b)=>a.setOrder-b.setOrder)}))}
 export function chooseDefaultLocation(locations:Location[], nextId:string){return locations.map(l=>({...l,isDefault:!l.archived&&l.id===nextId}))}
-type TimedSet=StrengthSet&{id?:string;performedAt:string}
-export function detectRepetitionPrs(sets:TimedSet[]):PrResult[]{const sorted=[...sets].sort((a,b)=>Date.parse(a.performedAt)-Date.parse(b.performedAt)||a.setOrder-b.setOrder),maxWeight=new Map<string,number>(),maxRepsAtWeight=new Map<string,number>(),maxBodyweightReps=new Map<string,number>(),seen=new Set<string>();return sorted.map((set,index)=>{const setKey=set.id??String(index),kinds:PrResult['kinds']=[];if(set.trackingType!=='repetitions'||set.reps===undefined)return{setKey,kinds};const first=!seen.has(set.exerciseId);if(first)kinds.push('first');else if(set.weight===undefined){if(set.reps>(maxBodyweightReps.get(set.exerciseId)??-Infinity))kinds.push('reps')}else{if(set.weight>(maxWeight.get(set.exerciseId)??-Infinity))kinds.push('weight');const key=`${set.exerciseId}:${set.weight}`;if(set.reps>(maxRepsAtWeight.get(key)??-Infinity))kinds.push('reps')}seen.add(set.exerciseId);if(set.weight===undefined)maxBodyweightReps.set(set.exerciseId,Math.max(maxBodyweightReps.get(set.exerciseId)??-Infinity,set.reps));else{maxWeight.set(set.exerciseId,Math.max(maxWeight.get(set.exerciseId)??-Infinity,set.weight));const key=`${set.exerciseId}:${set.weight}`;maxRepsAtWeight.set(key,Math.max(maxRepsAtWeight.get(key)??-Infinity,set.reps))}return{setKey,kinds}})}
+export type TimedSet=StrengthSet&{id?:string;performedAt:string;createdAt?:string;workoutId?:string}
+export function detectRepetitionPrs(sets:TimedSet[]):PrResult[]{
+ const sorted=[...sets].sort((a,b)=>Date.parse(a.performedAt)-Date.parse(b.performedAt)||(a.createdAt??'').localeCompare(b.createdAt??'')||a.setOrder-b.setOrder||(a.id??'').localeCompare(b.id??''));
+ const firstEntry=new Map<string,string>(),maxWeight=new Map<string,number>(),maxReps=new Map<string,number>();
+ return sorted.map((set,index)=>{
+  const setKey=set.id??String(index),kinds:PrResult['kinds']=[],entry=set.workoutId??setKey;
+  if(set.trackingType!=='repetitions'||!Number.isFinite(set.reps))return{setKey,kinds};
+  const first=!firstEntry.has(set.exerciseId);
+  if(first)firstEntry.set(set.exerciseId,entry);
+  const repsOnly=set.weight===undefined,key=set.exerciseId+':'+(repsOnly?'reps':set.weight),prior=maxReps.get(key),weightPrior=maxWeight.get(set.exerciseId);
+  if(first)kinds.push('first');
+  else if(firstEntry.get(set.exerciseId)!==entry){
+   if(!repsOnly&&weightPrior!==undefined&&set.weight!>weightPrior)kinds.push('weight');
+   else if(prior!==undefined&&set.reps!>prior)kinds.push('reps');
+  }
+  if(!repsOnly&&Number.isFinite(set.weight))maxWeight.set(set.exerciseId,Math.max(weightPrior??-Infinity,set.weight!));
+  maxReps.set(key,Math.max(prior??-Infinity,set.reps!));
+  return{setKey,kinds};
+ });
+}

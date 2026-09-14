@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useId } from "react";
 export function WheelColumn({
   label,
   value,
@@ -12,13 +12,14 @@ export function WheelColumn({
   onChange: (value: number) => void;
   compact?: boolean;
 }) {
+  const id=useId(),timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const ref = useRef<HTMLDivElement>(null),
     values = Array.from({ length: max + 1 }, (_, i) => i);
   useEffect(() => {
-    ref.current
-      ?.querySelector<HTMLElement>(`[data-value="${value}"]`)
-      ?.scrollIntoView({ block: "center" });
+    const column=ref.current,row=column?.querySelector<HTMLElement>('[data-value]');
+    if(column&&row)column.scrollTop=value*row.offsetHeight;
   }, [value]);
+  useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);},[]);
   const move = (delta: number) =>
     onChange(Math.max(0, Math.min(max, value + delta)));
   return (
@@ -28,7 +29,14 @@ export function WheelColumn({
       role="listbox"
       tabIndex={0}
       aria-label={label}
-      aria-activedescendant={`${label.replace(/\W/g, "-")}-${value}`}
+      aria-activedescendant={`${id}-${value}`}
+      onScroll={()=>{
+        if(timer.current)clearTimeout(timer.current);
+        timer.current=setTimeout(()=>{
+          const column=ref.current,row=column?.querySelector<HTMLElement>('[data-value]');
+          if(column&&row){const next=Math.max(0,Math.min(max,Math.round(column.scrollTop/row.offsetHeight)));if(next!==value)onChange(next);}
+        },120);
+      }}
       onWheel={(event) => {
         event.preventDefault();
         move(event.deltaY > 0 ? 1 : -1);
@@ -51,7 +59,7 @@ export function WheelColumn({
     >
       {values.map((option) => (
         <button
-          id={`${label.replace(/\W/g, "-")}-${option}`}
+          id={`${id}-${option}`}
           data-value={option}
           type="button"
           role="option"

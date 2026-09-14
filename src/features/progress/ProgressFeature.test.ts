@@ -1,6 +1,6 @@
 import{describe,expect,it}from'vitest';import raw from'./ProgressFeature.tsx?raw';import repositoryRaw from'./repository.ts?raw';const source=(raw+repositoryRaw).replace(/\s+/g,'').replace(/"/g,"'")
 describe('wired Progress UI',()=>{
-it('renders actual Strength results with detailed tooltips and no estimated-strength subtitle',()=>{expect(source).toContain('Actualrecordedset');expect(source).toContain('item.payload.reps');expect(source).toContain('item.payload.location');expect(source).not.toMatch(/estimated.?strength/i)})
+it('renders actual Strength results with detailed tooltips and no estimated-strength subtitle',()=>{expect(source).not.toContain('Actualrecordedset');expect(source).toContain('Graphmode');expect(source).toContain('strengthModePoints');expect(source).toContain('item.payload.reps');expect(source).toContain('item.payload.location');expect(source).not.toMatch(/estimated.?strength/i)})
 it('uses the shared responsive time axis on every Progress chart',()=>{expect(source.match(/<TimeXAxis/g)).toHaveLength(3);expect(source).toContain('fullLocalDateLabel')})
 it('renders searchable all-exercise monthly and yearly tables',()=>{expect(source).toContain('last12calendarmonths');expect(source).toContain('Filter${title}exercises');expect(source).toContain('shown.map');expect(source).toContain('progress-table')})
 it('renders compatible Cardio metrics',()=>{for(const text of['Averagespeed','Averagepace','incline','difficulty'])expect(source).toContain(text)})

@@ -1,3 +1,4 @@
+import { safeSupabaseDiagnostic } from './supabaseError';
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { defaultModules, toSettingsRow, type ModuleState } from '../domain/modules'
 
@@ -8,8 +9,8 @@ export async function loadUserSetup(client: SupabaseClient, userId: string): Pro
     client.from('user_settings').select('strength_enabled,cardio_enabled,mobility_enabled,weight_enabled,preferred_weight_unit').eq('user_id', userId).single(),
     client.from('profiles').select('onboarding_completed').eq('user_id', userId).single(),
   ])
-  if (settingsResult.error) throw settingsResult.error
-  if (profileResult.error) throw profileResult.error
+  if (settingsResult.error) { safeSupabaseDiagnostic("Startup","load user_settings",settingsResult.error);throw settingsResult.error }
+  if (profileResult.error) { safeSupabaseDiagnostic("Startup","load profiles",profileResult.error);throw profileResult.error }
   return {
     modules: {
       strength: settingsResult.data.strength_enabled,

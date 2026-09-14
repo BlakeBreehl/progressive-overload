@@ -13,12 +13,6 @@ export function primaryNavigation(settings: ModuleState): PrimaryScreen[] {
   return ['home', ...enabledModuleKeys(settings), 'progress']
 }
 
-export function contextualAddTarget(screen: PrimaryScreen): ModuleKey | 'chooser' | null {
-  if (screen === 'home') return 'chooser'
-  if (screen === 'progress') return null
-  return screen
-}
-
 export function mergeModuleSetting(current: ModuleState, key: ModuleKey, enabled: boolean): ModuleState {
   return { ...current, [key]: enabled }
 }

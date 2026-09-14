@@ -1,3 +1,6 @@
+import { strengthModePoints, strengthModes, type StrengthMode } from "./strengthModes";
+import { formatMetric, metricAxis } from "../../lib/metricTicks";
+import { detectRepetitionPrs, localDateKey } from "../strength/logic";
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -22,7 +25,7 @@ import {
   type StrengthPoint,
 } from "./logic";
 import { defaultStrengthExercise } from "./defaultExercise";
-import { loadStrengthProgressRows, strengthExerciseUsage, type StrengthProgressRow } from "./repository";
+import { loadStrengthProgressRows, strengthPrEvidence, strengthExerciseUsage, type StrengthProgressRow } from "./repository";
 import { TimeXAxis } from "../../components/TimeXAxis";
 import { fullLocalDateLabel } from "../../lib/timeAxis";
 
@@ -58,13 +61,15 @@ type FlexRow = {
 type ProgressRows = StrengthRow[] | CardioRow[] | FlexRow[];
 type LoadState = { key: string; data: ProgressRows; error: string };
 
-const date = (iso: string) => iso.slice(0, 10);
+const date = (iso: string) => iso.length===10?iso:localDateKey(iso);
 const within = (value: string, start: string, end: string) =>
   (!start || value >= start) && (!end || value <= end);
 const duration = (seconds: number) =>
   `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 
 type ParsedStrength = StrengthPoint & {
+  achievement?: string;
+  repsOnly?: boolean;
   exerciseId: string;
   exerciseName: string;
   locationId: string;
@@ -75,6 +80,7 @@ function parseStrength(
   rows: StrengthRow[],
   historical: HistoricalRow[] = [],
 ): ParsedStrength[] {
+  const badges=new Map(detectRepetitionPrs(strengthPrEvidence(rows)).map(pr=>[pr.setKey,pr.kinds[0]]));
   const dated = rows.flatMap((row) => {
     const exercise = relationObject<{ id: string; name: string }>(
         row.exercise,
@@ -84,13 +90,15 @@ function parseStrength(
         performed_at: string;
         location: { id: string; name: string } | null;
       }>(row.workout, "progress.strength.workout");
-    if (!exercise || !workout || row.weight == null || row.reps == null)
+    if (!exercise || !workout || row.reps == null)
       return [];
     const day = date(workout.performed_at);
     return [
       {
         date: day,
         weight: Number(row.weight),
+        repsOnly: row.weight == null,
+        achievement: row.id ? badges.get(row.id) : undefined,
         reps: Number(row.reps),
         location: workout.location?.name ?? null,
         locationId: workout.location?.id ?? "",
@@ -187,6 +195,7 @@ function StrengthTable({
           onChange={(event) => setValue(event.target.value)}
         />
       </div>
+      <p className="mt-2 text-xs text-slate-600">Green = Weight PR ? Red = Rep PR</p>
       <table className="progress-table mt-3">
         <thead>
           <tr>
@@ -214,6 +223,7 @@ function StrengthTable({
                 return (
                   <td
                     key={period}
+                    style={{backgroundColor:candidate?.achievement==="weight"?"#dcfce7":candidate?.achievement==="reps"?"#fee2e2":undefined,color:"#111"}}
                     title={
                       candidate
                         ? candidate.source === "dated"
@@ -224,7 +234,8 @@ function StrengthTable({
                   >
                     {candidate ? (
                       <>
-                        {candidate.weight} × {candidate.reps}
+                        {candidate.repsOnly ? `${candidate.reps} reps` : `${candidate.weight} x ${candidate.reps}`}
+                        {candidate.achievement && <span className="sr-only">{candidate.achievement === "weight" ? "Weight PR" : candidate.achievement === "reps" ? "Rep PR" : "First Entry"}</span>}
                         {candidate.source !== "dated" && (
                           <span className="block text-[10px] text-slate-500">
                             Historical summary
@@ -252,6 +263,7 @@ function StrengthProgress({
   rows: StrengthRow[];
   unit: string;
 }) {
+  const [mode,setMode]=useState<StrengthMode>("prs");
   const usage = strengthExerciseUsage(rows),
     points = parseStrength(rows),
     exercises = [
@@ -277,7 +289,14 @@ function StrengthProgress({
         usage.filter((point) => point.locationId).map((point) => [point.locationId, point.location!]),
       ).entries(),
     ],
-    chart: Array<{date:string;result:number;reps?:number;location?:string|null}> = isDistance ? distancePoints.map(point=>({date:point.date,result:Number(point.distance),reps:point.laps??undefined,location:point.location})) : selectedPoints.map((point) => ({date:point.date,result:point.weight,reps:point.reps,location:point.location})),chartUnit=isDistance?(distancePoints[0]?.distanceUnit??"distance"):unit,strengthDomain=paddedDomain(chart.map(point=>point.result),axes),
+    repsOnly=selectedPoints[0]?.repsOnly??rows.some(row=>row.exercise_id===exercise&&row.tracking_type==='repetitions'&&row.weight===null),
+    effectiveMode=(isDistance||repsOnly)&&mode==='one'?'all':mode,
+    chart=strengthModePoints(rows,exercise,effectiveMode,{start:axisDates.start,end:axisDates.end,location}),
+    chartUnit=isDistance?(distancePoints[0]?.distanceUnit??"distance"):repsOnly?"reps":unit,
+    metric=isDistance?'distance' as const:repsOnly?'reps' as const:'weight' as const,
+    values=chart.flatMap(point=>[point.result,point.three].filter((value):value is number=>value!==null)),
+    strengthDomain=paddedDomain(values,axes,metric==='weight'?5:metric==='reps'?1:0),
+    lineLabel=isDistance?'Distance':repsOnly?(effectiveMode==='prs'?'Rep PR':'Reps'):effectiveMode==='prs'?'Weight PR':effectiveMode==='one'?'Actual 1-Rep Max':effectiveMode==='repWeight'?'Weight Used for 3+ Reps':'Logged Sets',
     months = Array.from({ length: 12 }, (_, index) => {
       const value = new Date();
       value.setMonth(value.getMonth() - 11 + index);
@@ -295,7 +314,6 @@ function StrengthProgress({
           options={exercises.map(([id, name]) => ({ value: id, label: name }))}
           onChange={(value)=>setSelected(value)}
         />
-        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={unit}/></div>
         <Combobox
           label="Location"
           value={location}
@@ -306,6 +324,10 @@ function StrengthProgress({
           ]}
           onChange={setLocation}
         />
+        <Combobox label="Graph mode" value={effectiveMode} options={strengthModes.map(option=>({...option,disabled:(isDistance||repsOnly)&&option.value==='one'}))} onChange={value=>setMode(value as StrengthMode)} />
+        {(isDistance||repsOnly)&&<p className="text-xs text-slate-500">1-Rep Max requires a Weight + Reps exercise.</p>}
+        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={chartUnit}/></div>
+
       </div>
       <div className="surface-card">
         <h2 className="font-display text-lg font-bold text-ink">
@@ -317,19 +339,21 @@ function StrengthProgress({
               <LineChart data={chart}>
                 <CartesianGrid stroke="#e5e5e5" strokeDasharray="3 3" />
                 <TimeXAxis dates={chart.map(point=>point.date)} />
-                <YAxis domain={strengthDomain} unit={` ${chartUnit}`} />
+                <YAxis ticks={!axes.min&&!axes.max?metricAxis(values,metric).ticks:undefined} tickFormatter={value=>formatMetric(Number(value),metric)} allowDecimals={chartUnit!=="reps"} domain={strengthDomain} unit={` ${chartUnit}`} />
                 <Tooltip content={<StrengthTooltip unit={chartUnit} />} />
                 <Legend />
                 <Line
                   dataKey="result"
-                  name={isDistance ? "Actual recorded distance" : "Actual recorded set"}
+                  name={lineLabel}
+                  connectNulls dot={false} type="linear"
                   stroke="#d71920"
-                  strokeWidth={3}
+                  strokeWidth={1.5}
                 />
+                {effectiveMode==="prs"&&!repsOnly&&!isDistance&&<Line dataKey="three" name="3+ Rep Progress" stroke="#111" strokeWidth={1.5} dot={false} connectNulls type="linear"/>}
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="empty-card">No {exerciseName} entries in this date range.</div>
+            <div className="empty-card">{effectiveMode==="one"?"No recorded 1-rep sets in this range.":<>No {exerciseName} entries in this date range.</>}</div>
           )}
         </div>
       </div>
@@ -364,6 +388,7 @@ type CardioPoint = {
   difficulty?: number;
 };
 function CardioProgress({ rows }: { rows: CardioRow[] }) {
+  const [metric,setMetric]=useState<"duration"|"distance"|"speed"|"pace">("duration");
   const points: CardioPoint[] = rows.map((row) => {
       const name =
           relationObject<{ name: string }>(
@@ -408,7 +433,7 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
       paceMinutes: point.pace ? point.pace / 60 : undefined,
     })),
     weekly = aggregateCardio(visible, "week"),
-    monthly = aggregateCardio(visible, "month"),cardioDomain=paddedDomain(chart.flatMap(point=>[point.durationMinutes,point.distance,point.speed,point.paceMinutes].filter((value):value is number=>value!==undefined)),axes);
+    monthly = aggregateCardio(visible, "month"),metricValues=chart.flatMap(point=>point[metric]===undefined?[]:[point[metric]!]),cardioDomain=paddedDomain(metricValues,axes);
   const table = (title: string, items: ReturnType<typeof aggregateCardio>) => (
     <div className="surface-card overflow-x-auto">
       <h3 className="font-display font-bold text-ink">{title}</h3>
@@ -451,7 +476,8 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
           options={names.map((name) => ({ value: name, label: name }))}
           onChange={setSelected}
         />
-        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit="metric value"/></div>
+        <Combobox label="Metric" value={metric} options={[{value:"duration",label:"Duration"},{value:"distance",label:"Distance"},{value:"speed",label:"Average speed"},{value:"pace",label:"Average pace"}]} onChange={value=>setMetric(value as typeof metric)} />
+        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={metric==="duration"?"seconds":metric==="pace"?"seconds/mile":metric==="speed"?"mph":"miles"}/></div>
         <Combobox label="Location" value={location} options={[{ value: "", label: "All locations" }, { value: "__none__", label: "No location" }, ...locations.map(([id, name]) => ({ value: id, label: name }))]} onChange={setLocation} />
       </div>
       <div className="surface-card">
@@ -464,7 +490,7 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
               <LineChart data={chart}>
                 <CartesianGrid stroke="#e5e5e5" />
                 <TimeXAxis dates={chart.map(point=>point.date)} />
-                <YAxis domain={cardioDomain} />
+                <YAxis domain={cardioDomain} ticks={!axes.min&&!axes.max?metricAxis(metricValues,metric).ticks:undefined} tickFormatter={value=>formatMetric(Number(value),metric)} />
                 <Tooltip
                   content={({ active, payload, label }) =>
                     active && payload?.length ? (
@@ -502,19 +528,7 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
                   }
                 />
                 <Legend />
-                <Line
-                  dataKey="durationMinutes"
-                  name="Duration (minutes)"
-                  stroke="#111"
-                />
-                <Line
-                  dataKey="distance"
-                  name="Distance"
-                  stroke="#d71920"
-                  strokeWidth={3}
-                />
-                <Line dataKey="speed" name="Average speed" stroke="#8f2025" />
-                <Line dataKey="paceMinutes" name="Average pace" stroke="#555" />
+                <Line dataKey={metric} name={metric==="pace"?"Average pace (min/mile)":metric==="speed"?"Average speed (mph)":metric==="distance"?"Distance (miles)":"Duration"} stroke="#d71920" strokeWidth={1.5} dot={false}/>
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -606,7 +620,7 @@ function FlexProgress({ rows }: { rows: FlexRow[] }) {
                 <LineChart data={items as typeof visible}>
                   <CartesianGrid stroke="#e5e5e5" />
                   <TimeXAxis dates={(items as typeof visible).map(item=>item.date)} />
-                  <YAxis domain={paddedDomain((items as typeof visible).map(item=>kind==="time"?item.time:item.reps),kind==="time"?timeAxes:repAxes)} />
+                  <YAxis tickFormatter={value=>formatMetric(Number(value),kind==="time"?"duration":"reps")} allowDecimals={kind!=="reps"} domain={paddedDomain((items as typeof visible).map(item=>kind==="time"?item.time:item.reps),kind==="time"?timeAxes:repAxes)} />
                   <Tooltip labelFormatter={label=>fullLocalDateLabel(String(label))}/>
                   <Legend />
                   <Line
@@ -619,7 +633,7 @@ function FlexProgress({ rows }: { rows: FlexRow[] }) {
                     stroke="#d71920"
                     strokeWidth={3}
                   />
-                  <Line dataKey="sets" name="Sets" stroke="#111" />
+                  <YAxis yAxisId="sets" orientation="right" width={30} allowDecimals={false} /><Line yAxisId="sets" dataKey="sets" name="Sets" stroke="#111" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -701,7 +715,7 @@ export function ProgressFeature({
             key={tab}
             onClick={() => setChoice(tab)}
           >
-            {tab === "weight" ? "Weight" : tab[0].toUpperCase() + tab.slice(1)}
+            {tab === "weight" ? "Bodyweight" : tab[0].toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>

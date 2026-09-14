@@ -1,9 +1,10 @@
+import { LocationSelect } from "../../components/LocationSelect";
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { filterExercises, isRepsOnlyExercise, rankExercises } from "./logic";
 import type { Exercise, Location } from "./types";
 import { newQuickLiftSet, type QuickLiftDraft, type QuickLiftErrors } from "./quickLog";
 import { exerciseLogSubtitle } from "./searchMetadata";
-import { Select } from "../../components/SelectionControls";
+
 export function QuickLiftForm({
   draft,
   onChange,
@@ -190,7 +191,7 @@ export function QuickLiftForm({
             onChange={(e) => onChange(current=>({ ...current, date: e.target.value }))}
           />
         </label>
-        <Select label="Location (optional)" value={draft.locationId??""} options={[{value:"",label:"No location"},...locations.filter(x=>!x.archived).map(x=>({value:x.id,label:`${x.name}${x.isDefault?' (default)':''}`}))]} onChange={value=>onChange(current=>({...current,locationId:value||null}))}/>
+        <LocationSelect label="Location (optional)" value={draft.locationId??""} options={[{value:"",label:"No location"},...locations.filter(x=>!x.archived).map(x=>({value:x.id,label:`${x.name}${x.isDefault?' (default)':''}`}))]} onChange={value=>onChange(current=>({...current,locationId:value||null}))}/>
         {errors.save && (
           <p role="alert" className="text-sm text-red">
             {errors.save}
