@@ -1,3 +1,4 @@
+import { MobileNavigation } from "./components/MobileNavigation";
 import { FeatureBoundary } from "./components/FeatureBoundary";
 import { dataLoadMessage } from "./lib/supabaseError";
 import { ReleaseAnnouncement } from "./components/ReleaseAnnouncement";
@@ -26,6 +27,8 @@ import {
   saveModuleSettings,
 } from "./lib/settings";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
+const LazyGroups = lazy(() => import("./features/groups/GroupsFeature").then(module => ({default: module.GroupsFeature})));
+const GroupsFeature = (props: ComponentProps<typeof LazyGroups>) => <Suspense fallback={<div role="status">Loading Leaderboards...</div>}><LazyGroups {...props}/></Suspense>;
 const LazyStrength = lazy(() =>
     import("./features/strength/StrengthFeature").then((module) => ({
       default: module.StrengthFeature,
@@ -368,7 +371,7 @@ function EmptyScreen({
   screen,
   add,
 }: {
-  screen: Exclude<Screen, "home" | "settings">;
+  screen: Exclude<Screen, "home" | "settings" | "leaderboards">;
   add: () => void;
 }) {
   const item =
@@ -533,6 +536,8 @@ function App() {
           icon: modules[k].icon,
         })),
       { key: "progress" as Screen, label: "Progress", icon: "chart" },
+      { key: "leaderboards" as Screen, label: "Leaderboards", icon: "trophy" },
+      { key: "settings" as Screen, label: "Settings", icon: "settings" },
     ],
     [enabled],
   );
@@ -622,7 +627,7 @@ function App() {
   };
   return (
     <div className="app-frame min-h-screen bg-white text-slate-700">
-      {supabase&&auth.session&&<ReleaseAnnouncement key={auth.session.user.id} client={supabase} userId={auth.session.user.id} ready={loadedUserId===auth.session.user.id&&!setupError}/>}
+      {supabase&&auth.session&&<ReleaseAnnouncement key={auth.session.user.id} client={supabase} userId={auth.session.user.id} ready={loadedUserId===auth.session.user.id&&!setupError} onLeaderboards={()=>go("leaderboards")}/>}
       <aside className="sidebar">
         <Logo />
         <nav className="mt-10 flex flex-col gap-1">
@@ -662,6 +667,8 @@ function App() {
             add={() => setAddOpen(true)}
             settings={() => go("settings")}
           />
+        ) : screen === "leaderboards" && supabase && auth.session ? (
+          <GroupsFeature key={auth.session.user.id} client={supabase} userId={auth.session.user.id}/>
         ) : screen === "settings" && supabase && auth.session ? (
           <SettingsPanel client={supabase} userId={auth.session.user.id} enabled={enabled} unit={weightUnit} change={changeSettings} onUnitChange={setWeightUnit} open={target=>go(target)} signOut={()=>void auth.signOut()} home={()=>go("home")}/>
         ) : screen === "strength" && supabase && auth.session ? (
@@ -707,21 +714,10 @@ function App() {
             weightUnit={weightUnit}
           />
         ) : (
-          <EmptyScreen screen={screen as Exclude<Screen,"home"|"settings">} add={() => setAddOpen(true)} />
+          <EmptyScreen screen={screen as Exclude<Screen,"home"|"settings"|"leaderboards">} add={() => setAddOpen(true)} />
         )}
       </FeatureBoundary></main>
-      <nav className="bottom-nav">
-        {nav.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => go(item.key)}
-            className={screen === item.key ? "text-red" : "text-slate-600"}
-          >
-            <Icon name={item.icon} />
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
+      <MobileNavigation enabled={enabled} screen={screen} go={go} icon={name=><Icon name={name}/>}/>
       {addOpen && (
         <AddSheet
           enabled={enabled}

@@ -105,6 +105,7 @@ export function SettingsPanel({
       </button>
       <p className="eyebrow">MAKE IT YOURS</p>
       <h1 className="page-title">Settings</h1>
+      <button className="secondary-button mt-4" onClick={()=>window.dispatchEvent(new Event("open-release-announcement"))}>What’s New</button>
       <div className="mt-7 max-w-3xl space-y-5">
         <section aria-labelledby="module-visibility">
           <h2

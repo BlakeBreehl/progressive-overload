@@ -1,3 +1,4 @@
+import { comparisonWeight, convertWeight, displayWeight, type WeightUnit } from "../../lib/weightUnits";
 import { strengthModePoints, strengthModes, type StrengthMode } from "./strengthModes";
 import { formatMetric, metricAxis } from "../../lib/metricTicks";
 import { detectRepetitionPrs, localDateKey } from "../strength/logic";
@@ -15,7 +16,7 @@ import {
 import type { ModuleKey, ModuleState } from "../../domain/modules";
 import { relationObject } from "../../lib/supabaseError";
 import { WeightFeature } from "../weight/WeightFeature";
-import { Combobox } from "../../components/SelectionControls";
+import { Combobox, Select } from "../../components/SelectionControls";
 import { ChartControls, defaultAxisSettings, paddedDomain, rangeDates } from "../../components/ChartControls";
 import { chronological } from "../../lib/history";
 import {
@@ -70,6 +71,7 @@ const duration = (seconds: number) =>
 type ParsedStrength = StrengthPoint & {
   achievement?: string;
   repsOnly?: boolean;
+  weightLabel?:string;
   exerciseId: string;
   exerciseName: string;
   locationId: string;
@@ -78,7 +80,7 @@ type ParsedStrength = StrengthPoint & {
 };
 function parseStrength(
   rows: StrengthRow[],
-  historical: HistoricalRow[] = [],
+  historical: HistoricalRow[] = [], unit:WeightUnit="lb",
 ): ParsedStrength[] {
   const badges=new Map(detectRepetitionPrs(strengthPrEvidence(rows)).map(pr=>[pr.setKey,pr.kinds[0]]));
   const dated = rows.flatMap((row) => {
@@ -96,7 +98,9 @@ function parseStrength(
     return [
       {
         date: day,
-        weight: Number(row.weight),
+        weight: convertWeight(Number(row.weight),(row as StrengthRow).weight_unit??"lb",unit),
+        comparisonWeight:comparisonWeight(Number(row.weight),row.weight_unit??"lb"),
+        weightLabel:displayWeight(Number(row.weight),(row as StrengthRow).weight_unit??"lb",unit),
         repsOnly: row.weight == null,
         achievement: row.id ? badges.get(row.id) : undefined,
         reps: Number(row.reps),
@@ -146,7 +150,7 @@ function StrengthTooltip({
   payload?: Array<{
     name: string;
     value: number;
-    payload: { reps?: number; location?: string };
+    payload: { reps?: number; location?: string;displayValue?:string };
   }>;
   label?: string;
   unit: string;
@@ -157,7 +161,7 @@ function StrengthTooltip({
        <strong>{label?fullLocalDateLabel(label):""}</strong>
       {payload.map((item) => (
         <p key={item.name}>
-          {item.name}: {item.value} {unit}
+          {item.name}: {item.payload.displayValue??item.value} {unit}
           {item.payload.reps != null ? ` × ${item.payload.reps}` : ""}
           {item.payload.location ? ` · ${item.payload.location}` : ""}
         </p>
@@ -172,12 +176,14 @@ function StrengthTable({
   exercises,
   points,
   yearly,
+  unit,
 }: {
   title: string;
   periods: string[];
   exercises: Array<[string, string]>;
   points: ParsedStrength[];
   yearly?: boolean;
+  unit:string;
 }) {
   const [value, setValue] = useState("");
   const shown = exercises.filter(([, name]) =>
@@ -195,7 +201,7 @@ function StrengthTable({
           onChange={(event) => setValue(event.target.value)}
         />
       </div>
-      <p className="mt-2 text-xs text-slate-600">Green = Weight PR ? Red = Rep PR</p>
+      <p className="mt-2 text-xs text-slate-600">Green = Weight PR ? Blue = Rep PR</p>
       <table className="progress-table mt-3">
         <thead>
           <tr>
@@ -223,7 +229,7 @@ function StrengthTable({
                 return (
                   <td
                     key={period}
-                    style={{backgroundColor:candidate?.achievement==="weight"?"#dcfce7":candidate?.achievement==="reps"?"#fee2e2":undefined,color:"#111"}}
+                    style={{backgroundColor:candidate?.achievement==="weight"?"#dcfce7":candidate?.achievement==="reps"?"#dbeafe":undefined,color:"#111"}}
                     title={
                       candidate
                         ? candidate.source === "dated"
@@ -234,7 +240,7 @@ function StrengthTable({
                   >
                     {candidate ? (
                       <>
-                        {candidate.repsOnly ? `${candidate.reps} reps` : `${candidate.weight} x ${candidate.reps}`}
+                        {candidate.repsOnly ? `${candidate.reps} reps` : `${candidate.weightLabel??String(candidate.weight)} ${unit} x ${candidate.reps}`}
                         {candidate.achievement && <span className="sr-only">{candidate.achievement === "weight" ? "Weight PR" : candidate.achievement === "reps" ? "Rep PR" : "First Entry"}</span>}
                         {candidate.source !== "dated" && (
                           <span className="block text-[10px] text-slate-500">
@@ -265,7 +271,7 @@ function StrengthProgress({
 }) {
   const [mode,setMode]=useState<StrengthMode>("prs");
   const usage = strengthExerciseUsage(rows),
-    points = parseStrength(rows),
+    points = parseStrength(rows,[],unit as WeightUnit),
     exercises = [
       ...new Map(
         usage.map((point) => [point.exerciseId, point.exerciseName]),
@@ -291,7 +297,7 @@ function StrengthProgress({
     ],
     repsOnly=selectedPoints[0]?.repsOnly??rows.some(row=>row.exercise_id===exercise&&row.tracking_type==='repetitions'&&row.weight===null),
     effectiveMode=(isDistance||repsOnly)&&mode==='one'?'all':mode,
-    chart=strengthModePoints(rows,exercise,effectiveMode,{start:axisDates.start,end:axisDates.end,location}),
+    chart=strengthModePoints(rows,exercise,effectiveMode,{start:axisDates.start,end:axisDates.end,location,unit:unit as WeightUnit}),
     chartUnit=isDistance?(distancePoints[0]?.distanceUnit??"distance"):repsOnly?"reps":unit,
     metric=isDistance?'distance' as const:repsOnly?'reps' as const:'weight' as const,
     values=chart.flatMap(point=>[point.result,point.three].filter((value):value is number=>value!==null)),
@@ -307,7 +313,7 @@ function StrengthProgress({
   const exerciseName=exercises.find(([id])=>id===exercise)?.[1]??automatic.name;
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 lg:grid-cols-4">
+      <div className="primary-filters grid gap-3 lg:grid-cols-4">
         <Combobox
           label="Exercise"
           value={exercise}
@@ -324,7 +330,7 @@ function StrengthProgress({
           ]}
           onChange={setLocation}
         />
-        <Combobox label="Graph mode" value={effectiveMode} options={strengthModes.map(option=>({...option,disabled:(isDistance||repsOnly)&&option.value==='one'}))} onChange={value=>setMode(value as StrengthMode)} />
+        <Select label="Graph mode" value={effectiveMode} options={strengthModes.map(option=>({...option,disabled:(isDistance||repsOnly)&&option.value==='one'}))} onChange={value=>setMode(value as StrengthMode)} />
         {(isDistance||repsOnly)&&<p className="text-xs text-slate-500">1-Rep Max requires a Weight + Reps exercise.</p>}
         <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={chartUnit}/></div>
 
@@ -358,12 +364,14 @@ function StrengthProgress({
         </div>
       </div>
       <StrengthTable
+        unit={unit}
         title="Monthly — last 12 calendar months"
         periods={months}
         exercises={exercises}
         points={points}
       />
       <StrengthTable
+        unit={unit}
         title="Yearly"
         periods={years}
         exercises={exercises}

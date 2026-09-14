@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { safeSupabaseDiagnostic } from './supabaseError';
-export const releaseId='progressive-overload-2.0';
+export const releaseId='progressive-overload-2.0-launch';
 const shown=new Set<string>();
 const key=(userId:string)=>`${releaseId}:${userId}`;
 export function shownThisSession(userId:string){try{return shown.has(key(userId))||sessionStorage.getItem(key(userId))==='shown';}catch{return shown.has(key(userId));}}

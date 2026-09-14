@@ -1,3 +1,4 @@
+import { comparisonWeight } from "../../lib/weightUnits";
 import type { Exercise, Location, PrResult, StrengthSet, WorkoutDraft } from './types'
 
 export const normalizeExerciseName = (name:string) => name.trim().replace(/\s+/g,' ').toLocaleLowerCase()
@@ -24,13 +25,14 @@ export function detectRepetitionPrs(sets:TimedSet[]):PrResult[]{
   if(set.trackingType!=='repetitions'||!Number.isFinite(set.reps))return{setKey,kinds};
   const first=!firstEntry.has(set.exerciseId);
   if(first)firstEntry.set(set.exerciseId,entry);
-  const repsOnly=set.weight===undefined,key=set.exerciseId+':'+(repsOnly?'reps':set.weight),prior=maxReps.get(key),weightPrior=maxWeight.get(set.exerciseId);
+  const weight=set.weight===undefined?undefined:comparisonWeight(set.weight,set.weightUnit);
+  const repsOnly=weight===undefined,key=set.exerciseId+':'+(repsOnly?'reps':weight),prior=maxReps.get(key),weightPrior=maxWeight.get(set.exerciseId);
   if(first)kinds.push('first');
   else if(firstEntry.get(set.exerciseId)!==entry){
-   if(!repsOnly&&weightPrior!==undefined&&set.weight!>weightPrior)kinds.push('weight');
+   if(!repsOnly&&weightPrior!==undefined&&weight!>weightPrior)kinds.push('weight');
    else if(prior!==undefined&&set.reps!>prior)kinds.push('reps');
   }
-  if(!repsOnly&&Number.isFinite(set.weight))maxWeight.set(set.exerciseId,Math.max(weightPrior??-Infinity,set.weight!));
+  if(!repsOnly&&Number.isFinite(set.weight))maxWeight.set(set.exerciseId,Math.max(weightPrior??-Infinity,weight!));
   maxReps.set(key,Math.max(prior??-Infinity,set.reps!));
   return{setKey,kinds};
  });

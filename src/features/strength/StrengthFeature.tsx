@@ -1,3 +1,4 @@
+import { displayWeight, type WeightUnit } from "../../lib/weightUnits";
 import { YourSets } from "./YourSets";
 import { LocationSelect } from "../../components/LocationSelect";
 import { loadStrengthProgressRows, strengthPrEvidence } from "../progress/repository";
@@ -140,11 +141,11 @@ function PrBadges({ kinds }: { kinds: string[] }) {
 function SetText({ set, unit }: { set: StrengthSet; unit: string }) {
   return set.trackingType === "repetitions" ? (
     <>
-      {set.weight === undefined ? `${set.reps} reps` : `${set.weight} ${unit} × ${set.reps}`}
+      {set.weight === undefined ? `${set.reps} reps` : `${displayWeight(set.weight,set.weightUnit??"lb",unit as WeightUnit)} ${unit} × ${set.reps}`}
     </>
   ) : (
     <>
-      {set.load} {unit} load · {set.distance} {set.distanceUnit} × {set.laps}{" "}
+      {displayWeight(set.load??0,set.weightUnit??"lb",unit as WeightUnit)} {unit} load · {set.distance} {set.distanceUnit} × {set.laps}{" "}
       lap{set.laps === 1 ? "" : "s"}
       {set.durationSeconds != null
         ? ` · ${formatDuration(set.durationSeconds)}`
@@ -476,7 +477,7 @@ function WorkoutForm({
                     key={set.id ?? set.clientKey ?? si}
                     set={set}
                     index={si}
-                    unit={unit}
+                    unit={set.weightUnit??(draft.id?"lb":unit)}
                     onChange={(update) =>
                       updateBlock(bi, block=>({
                         ...block,
@@ -933,7 +934,7 @@ function HistoryList({
             result =
               group.sets.length === 1
                 ? group.sets[0].trackingType === "repetitions"
-                  ? group.sets[0].weight===undefined?`${group.sets[0].reps} reps`:`${group.sets[0].weight} ${unit} x ${group.sets[0].reps}`
+                  ? group.sets[0].weight===undefined?`${group.sets[0].reps} reps`:`${displayWeight(group.sets[0].weight,group.sets[0].weightUnit??"lb",unit as WeightUnit)} ${unit} x ${group.sets[0].reps}`
                   : `${group.sets[0].distance} ${group.sets[0].distanceUnit}`
                 : `${group.sets.length} sets`,
             displayDate = new Date(`${group.date}T12:00:00`).toLocaleDateString(
@@ -1082,7 +1083,7 @@ export function StrengthFeature({
     }),
     [formErrors, setFormErrors] = useState<string[]>([]),
     [quickDraft, setQuickDraft] = useState<QuickLiftDraft>(() =>
-      newQuickLift([]),
+      newQuickLift([],undefined,undefined,weightUnit),
     ),
     [quickErrors, setQuickErrors] = useState<QuickLiftErrors>({}),
     [saving, setSaving] = useState(false),
@@ -1139,7 +1140,7 @@ export function StrengthFeature({
       recentIds.has(id) && (k.includes("weight") || k.includes("reps")),
   ).length;
   const openQuick = (date?: string, locationId?: string | null) => {
-    setQuickDraft(newQuickLift(locations, date, locationId));
+    setQuickDraft(newQuickLift(locations, date, locationId,weightUnit));
     setQuickErrors({});
     setSuccessId(null);
     setView("quick");
@@ -1148,12 +1149,12 @@ export function StrengthFeature({
   useEffect(() => {
     if (create)
       queueMicrotask(() => {
-        setQuickDraft(newQuickLift(locations));
+        setQuickDraft(newQuickLift(locations,undefined,undefined,weightUnit));
         setQuickErrors({});
         setSuccessId(null);
         setView("quick");
       });
-  }, [create, locations]);
+  }, [create, locations,weightUnit]);
   const edit = (w: Workout) => {
     if (isQuickWorkout(w)) {
       setQuickDraft(quickLiftFromWorkout(w));
@@ -1211,7 +1212,7 @@ export function StrengthFeature({
     if (errors.length || saving) return;
     setSaving(true);
     try {
-      const id = await saveWorkout(client, userId, draft);
+      const id = await saveWorkout(client, userId, {...draft,exercises:draft.exercises.map(block=>({...block,sets:block.sets.map(set=>({...set,weightUnit:set.weightUnit??(draft.id?"lb":weightUnit)}))}))});
       setSuccessId(id);
       setSavedWorkout(await getWorkoutById(client,userId,id).catch(()=>null));
       await load();
@@ -1251,7 +1252,7 @@ export function StrengthFeature({
         onChange={setQuickDraft}
         exercises={exercises}
         locations={locations}
-        unit={weightUnit}
+        unit={quickDraft.weightUnit??weightUnit}
         saving={saving}
         errors={quickErrors}
         onSave={submitQuick}

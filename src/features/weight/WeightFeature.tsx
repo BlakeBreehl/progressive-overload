@@ -1,4 +1,4 @@
-import { formatMetric } from "../../lib/metricTicks";
+import { displayWeight, normalizeReadings } from "../../lib/weightUnits";
 import { bodyweightChart, defaultLineStyle, lineType, type LineStyle } from "./chart";
 import { readingChanges } from "./readingChanges";
 import { niceAxis } from "../../lib/niceAxis";
@@ -9,7 +9,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   YAxis,
@@ -32,8 +31,8 @@ import {
 import { localDateKey } from "../strength/logic";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Select } from "../../components/SelectionControls";
-import { ChartControls, defaultAxisSettings, paddedDomain, rangeDates, type AxisSettings } from "../../components/ChartControls";
-import { calendarChanges, type ChangePeriod } from "./calendarChanges";
+import { ChartControls, defaultAxisSettings, paddedDomain, type AxisSettings } from "../../components/ChartControls";
+import { WeeklyChangeTable } from "./WeeklyChangeTable";
 import { Pagination } from "../../components/Pagination";
 import { EntrySuccessActions } from "../../components/EntrySuccessActions";
 import { validHistoryPage } from "../../lib/pagedHistory";
@@ -49,7 +48,6 @@ type Form = {
   weight: string;
   notes: string;
 };
-function ChangeTooltip({point,unit}:{point:ChangePeriod;unit:string}){return <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-xl"><strong>{point.label}{point.partial?" · Partial":""}</strong><p>Average: {point.average.toFixed(2)} {unit}</p><p>Previous: {point.previousAverage===null?"A previous period is required.":`${point.previousAverage.toFixed(2)} ${unit}`}</p><p>Change: {point.change===null?"—":`${point.change>=0?"+":""}${point.change.toFixed(2)} ${unit}`}</p><p>Percent: {point.percentChange===null?"—":`${point.percentChange>=0?"+":""}${point.percentChange.toFixed(2)}%`}</p><p>Measured days: {point.measuredDays}</p></div>}
 const blank = (): Form => ({
   date: localDateKey(new Date().toISOString()),
   time: new Date().toTimeString().slice(0, 5),
@@ -102,7 +100,7 @@ export function WeightFeature({
   onExitCreate?: (saved?: boolean) => void;
 }) {
   const [style,setStyle]=useState<LineStyle>(defaultLineStyle);
-  const [graphUnit,setGraphUnit]=useState(unit);
+  const graphUnit=unit;
   const [items, setItems] = useState<WeighIn[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -118,7 +116,7 @@ export function WeightFeature({
     [historyItems,setHistoryItems]=useState<WeighIn[]>([]),
     [historyTotal,setHistoryTotal]=useState(0),
     [historyLoading,setHistoryLoading]=useState(false),[revision,setRevision]=useState(0);
-  const [weightAxes,setWeightAxes]=useState<AxisSettings>({...defaultAxisSettings,range:"3m"}),[changeAxes,setChangeAxes]=useState(defaultAxisSettings),[changeAggregation,setChangeAggregation]=useState<"weekly"|"monthly">("weekly");
+  const [weightAxes,setWeightAxes]=useState<AxisSettings>({...defaultAxisSettings,range:"3m"});
   const load = useCallback(async () => {
     try {
       // Chart snapshots include comparison evidence outside the visible history page.
@@ -157,9 +155,9 @@ export function WeightFeature({
   const visible = filterReadings(items, dates.start, dates.end, period),
     displayUnit = form?.unit ?? unit;
   useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getWeightHistoryPage(client,userId,{page:historyPage,period,start:dates.start,end:dates.end}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Bodyweight history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,period,dates.start,dates.end,loading,revision]);
-  const weeklyReadings=readingChanges([...items,...historyItems]);
+  const weeklyReadings=readingChanges(normalizeReadings([...items,...historyItems],unit));
   const historyResults = {items:historyItems,total:historyTotal,page:historyPage,pages:Math.max(1,Math.ceil(historyTotal/20)),start:historyTotal?(historyPage-1)*20+1:0,end:Math.min(historyPage*20,historyTotal)};
-  const axisVisible=visible.filter(item=>item.unit===graphUnit),chart = bodyweightChart(axisVisible),changeReadings=filterReadings(items.filter(item=>item.unit===graphUnit),rangeDates(changeAxes).start,rangeDates(changeAxes).end,period),weeklyCalendar=calendarChanges(changeReadings,"weekly",period),monthlyCalendar=calendarChanges(changeReadings,"monthly",period),changes=changeAggregation==="weekly"?weeklyCalendar:monthlyCalendar,weightDomain=paddedDomain(axisVisible.map(item=>item.weight),weightAxes,5),absoluteDomain=paddedDomain([0,...changes.flatMap(item=>item.change===null?[]:[item.change])],changeAxes),percentDomain=paddedDomain([0,...changes.flatMap(item=>item.percentChange===null?[]:[item.percentChange])],changeAxes);
+  const axisVisible=normalizeReadings(visible,graphUnit),chart=bodyweightChart(axisVisible),weightDomain=paddedDomain(axisVisible.map(item=>item.weight),weightAxes,5);
   const save = async () => {
     if (!form||saving) return;
     const weight = Number(form.weight);
@@ -193,7 +191,7 @@ export function WeightFeature({
     }finally{setSaving(false)}
   };
   if (loading) return <div className="surface-card">Loading Bodyweight…</div>;
-  if(success&&!form)return <section className="mx-auto max-w-xl"><p className="eyebrow">BODYWEIGHT SAVED</p><h1 className="page-title">Entry saved.</h1><div className="surface-card mt-6"><strong>{success.form.weight} {unit}</strong><p className="mt-2 text-sm text-slate-600">{success.form.period==="morning"?"Morning":"Evening"} · {success.form.date}</p></div><EntrySuccessActions onAnother={()=>{setSuccess(null);setForm(blank())}} onEdit={()=>setForm({...success.form,id:success.id})} onDone={()=>setSuccess(null)}/></section>;
+  if(success&&!form)return <section className="mx-auto max-w-xl"><p className="eyebrow">BODYWEIGHT SAVED</p><h1 className="page-title">Entry saved.</h1><div className="surface-card mt-6"><strong>{displayWeight(Number(success.form.weight),success.form.unit??unit,unit)} {unit}</strong><p className="mt-2 text-sm text-slate-600">{success.form.period==="morning"?"Morning":"Evening"} · {success.form.date}</p></div><EntrySuccessActions onAnother={()=>{setSuccess(null);setForm(blank())}} onEdit={()=>setForm({...success.form,id:success.id})} onDone={()=>setSuccess(null)}/></section>;
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -318,7 +316,6 @@ export function WeightFeature({
         </div>
       )}
       <div className="surface-card mt-5">
-        <Select label="Chart weight unit" value={graphUnit} options={[{value:"lb",label:"Pounds (lb)"},{value:"kg",label:"Kilograms (kg)"}]} onChange={value=>setGraphUnit(value as "lb"|"kg")} />
         <ChartControls settings={weightAxes} setSettings={setWeightAxes} unit={graphUnit} showRange={false}><Select label="Line Style" value={style} options={[{value:"straight",label:"Straight"},{value:"smooth",label:"Smooth"}]} onChange={value=>setStyle(value as LineStyle)} /></ChartControls>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart
@@ -331,8 +328,8 @@ export function WeightFeature({
             <YAxis type="number" ticks={!weightAxes.min&&!weightAxes.max?niceAxis(axisVisible.map(item=>item.weight),5).ticks:undefined} domain={weightDomain} unit={` ${graphUnit}`} tick={{ fontSize: 10 }} />
             <Tooltip
               labelFormatter={label=>fullLocalDateLabel(String(label))}
-              formatter={(value, name) => [
-                `${value} ${graphUnit}`,
+              formatter={(value, name, entry) => [
+                `${(() => {const reading=visible.find(row=>row.id===entry.payload.id);return reading?displayWeight(reading.weight,reading.unit,graphUnit):value;})()} ${graphUnit}`,
                 name === "Morning" ? "Morning" : "Evening",
               ]}
             />
@@ -357,12 +354,7 @@ export function WeightFeature({
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <section className="mt-8 space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">CALENDAR COMPARISONS</p><h2 className="font-display text-xl font-bold text-ink">Bodyweight Change</h2></div><Select label="Aggregation" value={changeAggregation} options={[{value:"weekly",label:"Weekly"},{value:"monthly",label:"Monthly"}]} onChange={value=>setChangeAggregation(value as typeof changeAggregation)}/></div>
-        <ChartControls settings={changeAxes} setSettings={setChangeAxes} unit={`${graphUnit} / %`} />
-        <p className="text-xs text-slate-500">Daily readings are averaged once per calendar day. Missing days are ignored. A previous adjacent period is required for change.</p>
-        <div className="grid gap-4 lg:grid-cols-2"><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Absolute Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis tickFormatter={value=>formatMetric(Number(value),"distance")} domain={absoluteDomain} unit={` ${graphUnit}`}/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={graphUnit}/>:null}/><Line type={lineType(style)} dot={false} dataKey="change" stroke="#d71920" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div><div className="surface-card h-80"><h3 className="font-display font-bold text-ink">Percent Change</h3><ResponsiveContainer width="100%" height="90%"><LineChart data={changes}><CartesianGrid stroke="#ddd"/><TimeXAxis dataKey="key" dates={changes.map(point=>point.key)} mode={changeAggregation==="weekly"?"weekly":"monthly"}/><YAxis tickFormatter={value=>formatMetric(Number(value),"percentage")} domain={percentDomain}/><ReferenceLine y={0} stroke="#111" strokeWidth={2}/><Tooltip content={({active,payload})=>active&&payload?.[0]?<ChangeTooltip point={payload[0].payload} unit={graphUnit}/>:null}/><Line type={lineType(style)} dot={false} dataKey="percentChange" stroke="#111" strokeWidth={3} connectNulls={false}/></LineChart></ResponsiveContainer></div></div>
-      </section>
+      <WeeklyChangeTable key={`${userId}:${period}`} readings={items} unit={unit} period={period}/>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <ComparisonCard
           title="Week to week"
@@ -386,12 +378,12 @@ export function WeightFeature({
           >
             <div>
               <strong className="text-ink">
-                {x.weight} {x.unit}
+                {displayWeight(x.weight,x.unit,unit)} {unit}
               </strong>
               <p className="text-xs capitalize text-slate-500">
                 {new Date(x.measuredAt).toLocaleString()} · {x.period}
               </p>
-              <p className="text-xs text-slate-600">{weeklyReadings.get(x.id) ? `Week: ${weeklyReadings.get(x.id)!.absolute>=0?"+":""}${Number(weeklyReadings.get(x.id)!.absolute.toFixed(4))} ${x.unit} (${weeklyReadings.get(x.id)!.percent>=0?"+":""}${weeklyReadings.get(x.id)!.percent.toFixed(2)}%)` : "Week: insufficient comparable data"}</p>
+              <p className="text-xs text-slate-600">{weeklyReadings.get(x.id) ? `Week: ${weeklyReadings.get(x.id)!.absolute>=0?"+":""}${Number(weeklyReadings.get(x.id)!.absolute.toFixed(4))} ${unit} (${weeklyReadings.get(x.id)!.percent>=0?"+":""}${weeklyReadings.get(x.id)!.percent.toFixed(2)}%)` : "Week: insufficient comparable data"}</p>
               {x.notes && <p className="text-sm text-slate-600">{x.notes}</p>}
             </div>
             <div>
