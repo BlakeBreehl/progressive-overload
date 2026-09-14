@@ -1,3 +1,4 @@
+import {ForgotPassword} from './components/PasswordManagement';
 import { useId, useState, type FormEvent } from "react";
 import { supabase } from "./lib/supabase";
 
@@ -24,6 +25,7 @@ export function AuthScreen() {
     [kind, setKind] = useState<"error" | "success">("error"),
     [busy, setBusy] = useState(false),
     [showPassword, setShowPassword] = useState(false);
+  const [forgot,setForgot]=useState(false);
   const messageId = useId();
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -66,6 +68,7 @@ export function AuthScreen() {
     setMessage("");
     setShowPassword(false);
   };
+  if(forgot&&supabase)return <ForgotPassword client={supabase} onBack={()=>setForgot(false)}/>;
   return (
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="auth-title">
@@ -175,6 +178,7 @@ export function AuthScreen() {
             )}
           </button>
         </form>
+        {mode==="sign-in"&&<button className="text-button mt-4" disabled={busy} onClick={()=>{setPassword("");setForgot(true);}}>Forgot Password?</button>}
         <div className="auth-switch">
           <span>
             {mode === "sign-in"

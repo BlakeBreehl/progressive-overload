@@ -112,6 +112,7 @@ export function WeightFeature({
     [period, setPeriod] = useState<"both" | "morning" | "evening">("both"),
     [deleteTarget,setDeleteTarget]=useState<Reading|null>(null),
     [deleting,setDeleting]=useState(false),
+    [historySearch,setHistorySearch]=useState(""),
     [historyPage,setHistoryPage]=useState(1),
     [historyItems,setHistoryItems]=useState<WeighIn[]>([]),
     [historyTotal,setHistoryTotal]=useState(0),
@@ -154,7 +155,7 @@ export function WeightFeature({
   }, [range, start, end]);
   const visible = filterReadings(items, dates.start, dates.end, period),
     displayUnit = form?.unit ?? unit;
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getWeightHistoryPage(client,userId,{page:historyPage,period,start:dates.start,end:dates.end}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Bodyweight history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,period,dates.start,dates.end,loading,revision]);
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getWeightHistoryPage(client,userId,{page:historyPage,search:historySearch,period,start:dates.start,end:dates.end}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Bodyweight history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,historySearch,period,dates.start,dates.end,loading,revision]);
   const weeklyReadings=readingChanges(normalizeReadings([...items,...historyItems],unit));
   const historyResults = {items:historyItems,total:historyTotal,page:historyPage,pages:Math.max(1,Math.ceil(historyTotal/20)),start:historyTotal?(historyPage-1)*20+1:0,end:Math.min(historyPage*20,historyTotal)};
   const axisVisible=normalizeReadings(visible,graphUnit),chart=bodyweightChart(axisVisible),weightDomain=paddedDomain(axisVisible.map(item=>item.weight),weightAxes,5);
@@ -370,6 +371,7 @@ export function WeightFeature({
       <h2 className="mt-8 font-display text-xl font-bold text-ink">
         Recent weigh-ins
       </h2>
+      <label className="field-label mt-3">Search Bodyweight history notes<input type="search" className="field-input" value={historySearch} onChange={event=>{setHistorySearch(event.target.value);setHistoryPage(1);}}/></label>
       <div className="mt-3 space-y-2">
         {historyLoading ? <div className="empty-card">Loading matching readings…</div> : historyResults.items.map((x) => (
           <div
@@ -413,8 +415,8 @@ export function WeightFeature({
             </div>
           </div>
         ))}
-        {!visible.length && (
-          <div className="empty-card">No readings in this range.</div>
+        {!historyLoading&&!historyTotal && (
+          <div className="empty-card">No matching readings in this range.</div>
         )}
       </div><Pagination {...historyResults} onChange={setHistoryPage} /><ConfirmDialog open={!!deleteTarget} title="Delete this weigh-in?" description="This permanently removes the selected bodyweight reading and recalculates graphs and statistics." confirmLabel="Delete Weigh-in" busy={deleting} error={error} onCancel={()=>{setDeleteTarget(null);setError("")}} onConfirm={async()=>{if(!deleteTarget)return;setDeleting(true);try{await deleteWeighIn(client,userId,deleteTarget.id);setDeleteTarget(null);await load();setRevision(value=>value+1)}catch{setError("Could not delete this weigh-in. It is unchanged; try again.")}finally{setDeleting(false)}}}>{deleteTarget&&<><strong>{deleteTarget.weight} {deleteTarget.unit}</strong><p className="capitalize text-slate-500">{new Date(deleteTarget.measuredAt).toLocaleString()} · {deleteTarget.period}</p></>}</ConfirmDialog>
     </section>

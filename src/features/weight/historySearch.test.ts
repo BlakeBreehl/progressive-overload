@@ -1,0 +1,3 @@
+import {expect,it,vi} from 'vitest';
+import {getWeightHistoryPage} from './repository';
+it('filters notes under account ownership before stable server pagination',async()=>{const query:any={};for(const method of ['select','eq','ilike','order'])query[method]=vi.fn(()=>query);query.range=vi.fn(async()=>({data:[],error:null,count:0}));await getWeightHistoryPage({from:()=>query} as never,'owner',{page:2,search:'morning check'});expect(query.eq).toHaveBeenCalledWith('user_id','owner');expect(query.ilike).toHaveBeenCalledWith('notes','%morning%check%');expect(query.range).toHaveBeenCalledWith(20,39);expect(query.ilike.mock.invocationCallOrder[0]).toBeLessThan(query.range.mock.invocationCallOrder[0]);});
