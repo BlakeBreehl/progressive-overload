@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {calendarStart,cardioRanks,inviteCode,strengthRanks} from './logic';
+import {calendarStart,cardioRanks,strengthRanks} from './logic';
 import type {GroupSummary} from './repository';
 const data:GroupSummary={name:'Test',timezone:'America/New_York',period_start:'',month_start:'',through:'',members:[{member_id:'a',display_name:'Alex',role:'owner',is_self:true},{member_id:'b',display_name:'Blake',role:'member',is_self:false},{member_id:'c',display_name:'Casey',role:'member',is_self:false}],sets:[{member_id:'a',muscle:'Chest',total:2},{member_id:'a',muscle:'Back',total:1},{member_id:'b',muscle:'Legs',total:3}],prs:[{member_id:'a',weight_prs:2,rep_prs:1},{member_id:'b',weight_prs:1,rep_prs:2}],cardio:[{member_id:'a',activity:'running',entries:1,duration_seconds:3723,distance_meters:1609.344,distance_entries:1},{member_id:'a',activity:'cycling',entries:1,duration_seconds:60,distance_meters:1000,distance_entries:1},{member_id:'b',activity:'stairmaster',entries:1,duration_seconds:72,distance_meters:null,distance_entries:0}],activities:[]};
 describe('private aggregate presentation',()=>{
@@ -7,5 +7,4 @@ describe('private aggregate presentation',()=>{
  it('sums categories once and gives deterministic competition ranks for ties',()=>{expect(strengthRanks(data).map(row=>[row.display_name,row.value,row.rank,row.tied])).toEqual([['Alex',3,1,true],['Blake',3,1,true],['Casey',0,3,false]]);expect(strengthRanks(data,'combined')[0].value).toBe(3);expect(strengthRanks(data,'reps')[0].display_name).toBe('Blake');});
  it('retains exact durations and missing distance instead of inventing zero',()=>{const rows=cardioRanks(data,'distance');expect(rows[0].distance).toBe(2609.344);expect(rows[0].duration).toBe(3783);expect(rows[1].value).toBeNull();expect(rows[1].rank).toBeNull();expect(cardioRanks(data,'duration')[1].duration).toBe(72);});
  it('only returns current member identities even if old counts remain in a snapshot fixture',()=>{expect(strengthRanks({...data,members:data.members.slice(1)}).some(row=>row.member_id==='a')).toBe(false);});
- it('extracts private fragment invitations without navigating to an input URL',()=>{const token='a'.repeat(64);expect(inviteCode(`https://example.test/leaderboards#invite=${token}`)).toBe(token);expect(inviteCode(` ${token} `)).toBe(token);expect(inviteCode('https://example.test/')).toBe('');});
 });

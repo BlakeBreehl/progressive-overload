@@ -1,32 +1,25 @@
-import { describe,expect,it } from 'vitest';
-import { strengthModePoints } from './strengthModes';
-import type { StrengthProgressRow } from './repository';
-const row=(id:string,day:number,weight:number|null,reps:number):StrengthProgressRow=>({id,exercise_id:'e',tracking_type:'repetitions',weight,reps,set_order:1,load:null,distance:null,distance_unit:null,laps:null,duration_seconds:null,exercise:{id:'e'},workout:{performed_at:`2026-01-${String(day).padStart(2,'0')}T12:00:00`,created_at:'2026-01-01',location:{id:'gym',name:'Gym'}}});
-const rows=[row('a',1,100,5),row('b',2,110,1),row('c',3,105,4),row('d',4,105,6),row('e',5,90,5),row('f',6,115,1),row('g',7,115,1),row('h',8,100,1)];
-describe('actual Strength graph modes',()=>{
-  it('PRs contain only strictly increasing weight and 3+ rep events',()=>{
-    const points=strengthModePoints(rows,'e','prs');
-    expect(points.filter(p=>p.result!==null).map(p=>p.result)).toEqual([100,110,115]);
-    expect(points.filter(p=>p.three!==null).map(p=>p.three)).toEqual([100,105]);
-    expect(points.some(p=>p.id==='d'||p.id==='e')).toBe(false);
-  });
-  it('one-rep mode uses only actual increasing exactly-one-rep sets',()=>{
-    const points=strengthModePoints(rows,'e','one');expect(points.map(p=>p.id)).toEqual(['b','f']);expect(points.every(p=>p.reps===1)).toBe(true);
-  });
-  it('Rep Weight preserves lower later sets with at least three reps',()=>expect(strengthModePoints(rows,'e','repWeight').map(p=>p.id)).toEqual(['a','c','d','e']));
-  it('All Logged Sets retains every independent matching set',()=>{
-    const data=[...rows,row('same-day',8,95,5)];expect(strengthModePoints(data,'e','all')).toHaveLength(9);
-    expect(strengthModePoints(data,'e','all',{start:'2026-01-08'})).toHaveLength(2);
-  });
-  it('recalculates backdated history before applying range or location filters',()=>{
-    expect(strengthModePoints([...rows,row('older',1,200,5)],'e','prs',{start:'2026-01-02'})).toEqual([]);
-    expect(strengthModePoints(rows,'e','all',{location:'elsewhere'})).toEqual([]);
-  });
-  it('adapts reps-only modes and never fabricates a one-rep weight',()=>{
-    const data=[row('a',1,null,5),row('b',2,null,4),row('c',3,null,6)];
-    expect(strengthModePoints(data,'e','prs').map(p=>p.result)).toEqual([5,6]);
-    expect(strengthModePoints(data,'e','one')).toEqual([]);
-    expect(strengthModePoints(data,'e','repWeight')).toHaveLength(3);
-  });
-  it('keeps source values and records unchanged',()=>{const before=structuredClone(rows);for(const mode of ['prs','one','repWeight','all'] as const)strengthModePoints(rows,'e',mode);expect(rows).toEqual(before);});
+import {describe,expect,it} from 'vitest';
+import {strengthModePoints,defaultStrengthMode,selectedStrengthMode,strengthModes} from './strengthModes';
+import {detectRepetitionPrs} from '../strength/logic';
+import {strengthPrEvidence,type StrengthProgressRow} from './repository';
+const row=(id:string,day:number,weight:number|null,reps:number,extra:Partial<StrengthProgressRow>={}):StrengthProgressRow=>({id,exercise_id:'e',tracking_type:'repetitions',weight,reps,set_order:1,weight_unit:'lb',load:null,distance:null,distance_unit:null,laps:null,duration_seconds:null,exercise:{id:'e',name:'Bench Press'},workout:{id,performed_at:'2026-01-'+String(day).padStart(2,'0')+'T12:00:00',created_at:'2026-01-01T12:00:00',location:{id:'gym',name:'Gym'}},...extra});
+const example=[row('a',1,100,4),row('b',2,110,3),row('c',3,150,1),row('d',4,105,6),row('e',5,100,12),row('f',6,105,8),row('g',7,110,4),row('h',8,90,20),row('i',9,115,4)];
+describe('recorded Strength milestones',()=>{
+ it('matches the requested nondecreasing four-rep progression exactly',()=>{expect(strengthModePoints(example,'e','repWeight').map(p=>p.result)).toEqual([100,105,105,110,115]);});
+ it('sorts unsorted insertion order and backdated records by performance date',()=>{const data=[...example].reverse();expect(strengthModePoints(data,'e','repWeight')).toEqual(strengthModePoints(example,'e','repWeight'));const backdated=row('old',1,200,4,{workout:{performed_at:'2025-12-31T12:00:00',created_at:'2026-02-01',location:null}});expect(strengthModePoints([...example,backdated],'e','repWeight').map(p=>p.id)).toEqual(['old']);});
+ it('breaks same-day ties by creation time then set order and ID',()=>{const data=[row('d',1,110,4,{set_order:2}),row('b',1,100,5),row('a',1,100,4),row('c',1,105,4,{workout:{performed_at:'2026-01-01T12:00:00',created_at:'2025-12-31',location:null}})];expect(strengthModePoints(data,'e','all').map(p=>p.id)).toEqual(['c','a','b','d']);expect(strengthModePoints(data,'e','repWeight').map(p=>p.id)).toEqual(['c','d']);});
+ it('excludes one through three reps and includes exactly four',()=>{expect(strengthModePoints([row('a',1,200,1),row('b',2,210,2),row('c',3,220,3),row('d',4,100,4)],'e','repWeight').map(p=>p.id)).toEqual(['d']);});
+ it('retains a lower-load exact-weight Rep PR badge independently without plotting it',()=>{const data=[row('a',1,1,4),row('b',2,100,4),row('c',3,1,100)];expect(detectRepetitionPrs(strengthPrEvidence(data)).map(p=>p.kinds)).toEqual([['first'],['weight'],['reps']]);expect(strengthModePoints(data,'e','repWeight').map(p=>p.id)).toEqual(['a','b']);});
+ it('plots flat current-record rep improvements but rejects equal or lower reps',()=>{const data=[row('a',1,100,4),row('b',2,100,4),row('c',3,100,3),row('d',4,100,6),row('e',5,100,5)];expect(strengthModePoints(data,'e','repWeight').map(p=>[p.result,p.reps])).toEqual([[100,4],[100,6]]);});
+ it('resets the rep milestone when a higher qualifying weight is reached',()=>{const data=[row('a',1,100,20),row('b',2,105,4),row('c',3,105,5)];expect(strengthModePoints(data,'e','repWeight').map(p=>p.result)).toEqual([100,105,105]);});
+ it('uses only exactly-one-rep strictly increasing weights',()=>{const data=[row('a',1,100,1),row('b',2,200,2),row('c',3,90,1),row('d',4,100,1),row('e',5,110,1),row('f',6,null,1)];const result=strengthModePoints(data.reverse(),'e','one');expect(result.map(p=>p.result)).toEqual([100,110]);expect(result.every(p=>p.reps===1)).toBe(true);});
+ it('normalizes mixed units before comparing and keeps equivalent milestones flat',()=>{const data=[row('a',1,100,4),row('b',2,45.359237,6,{weight_unit:'kg'}),row('c',3,46,4,{weight_unit:'kg'}),row('d',4,100,20)];for(const unit of ['lb','kg'] as const){const result=strengthModePoints(data,'e','repWeight',{unit});expect(result.map(p=>p.id)).toEqual(['a','b','c']);expect(result[0].result).toBe(result[1].result);expect(result[2].result).toBeGreaterThan(result[1].result);}});
+ it('applies dates before calculating both milestone modes',()=>{for(const mode of ['one','repWeight'] as const){const reps=mode==='one'?1:4;const data=[row('a',1,200,reps),row('b',2,100,reps),row('c',3,110,reps),row('d',4,300,reps)];expect(strengthModePoints(data,'e',mode,{start:'2026-01-02',end:'2026-01-03'}).map(p=>p.result)).toEqual([100,110]);}});
+ it('applies locations and No location before calculating progression',()=>{const data=[row('a',1,200,4),row('b',2,100,4,{workout:{performed_at:'2026-01-02',created_at:'2026-01-02',location:null}}),row('c',3,110,4,{workout:{performed_at:'2026-01-03',created_at:'2026-01-03',location:{id:'other',name:'Other gym'}}})];expect(strengthModePoints(data,'e','repWeight',{location:'other'})[0].result).toBe(110);expect(strengthModePoints(data,'e','repWeight',{location:'__none__'})[0].result).toBe(100);});
+ it('preserves every independent valid set in All Logged Sets, including same-day sets',()=>{expect(strengthModePoints([...example,row('same-day',9,80,5)],'e','all')).toHaveLength(10);expect(strengthModePoints(example,'e','all').map(p=>p.result)).toEqual(example.map(p=>p.weight));});
+ it('uses useful defaults and retains manual selection for the same exercise',()=>{expect(defaultStrengthMode(example,'e')).toBe('one');expect(defaultStrengthMode([row('a',1,100,4)],'e')).toBe('repWeight');expect(defaultStrengthMode([row('a',1,100,3)],'e')).toBe('all');expect(defaultStrengthMode([row('a',1,null,5)],'e')).toBe('all');expect(defaultStrengthMode([],'missing')).toBe('all');expect(selectedStrengthMode({exerciseId:'e',mode:'all'},example,'e')).toBe('all');expect(selectedStrengthMode({exerciseId:'other',mode:'all'},example,'e')).toBe('one');});
+ it('has exactly the three supported mode options',()=>{expect(strengthModes).toEqual([{value:'one',label:'One Rep Max'},{value:'repWeight',label:'Rep Weight'},{value:'all',label:'All Logged Sets'}]);});
+ it('keeps reps-only and distance sets out of weighted milestones',()=>{const data=[row('a',1,null,5),row('b',2,null,6),row('c',3,null,0,{tracking_type:'distance',distance:100})];expect(strengthModePoints(data,'e','one')).toEqual([]);expect(strengthModePoints(data,'e','repWeight')).toEqual([]);expect(strengthModePoints(data,'e','all').map(p=>p.result)).toEqual([5,6,100]);});
+ it('rejects invalid date, nonfinite weight, missing or fractional reps without estimates',()=>{const data=[row('a',1,NaN,4),row('b',2,Infinity,4),row('c',3,-1,4),row('d',4,100,NaN),row('e',5,100,4.5),row('f',6,100,4,{workout:{performed_at:'invalid',created_at:'invalid',location:null}}),row('g',7,null,4)];expect(strengthModePoints(data,'e','repWeight')).toEqual([]);});
+ it('carries actual marker details and never mutates source records',()=>{const before=structuredClone(example);const result=strengthModePoints(example,'e','repWeight');expect(result[0]).toMatchObject({id:'a',date:'2026-01-01',displayValue:'100',reps:4,exercise:'Bench Press',location:'Gym'});expect(result.every(point=>Number.isFinite(point.result))).toBe(true);for(const mode of ['one','repWeight','all'] as const)strengthModePoints(example,'e',mode);expect(example).toEqual(before);});
 });

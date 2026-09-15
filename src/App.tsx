@@ -537,7 +537,6 @@ function App() {
         })),
       { key: "progress" as Screen, label: "Progress", icon: "chart" },
       { key: "leaderboards" as Screen, label: "Leaderboards", icon: "trophy" },
-      { key: "settings" as Screen, label: "Settings", icon: "settings" },
     ],
     [enabled],
   );
@@ -651,13 +650,6 @@ function App() {
       </aside>
       <header className="mobile-header">
         <Logo />
-        <button
-          onClick={() => go("settings")}
-          className="icon-button"
-          aria-label="Settings"
-        >
-          <Icon name="settings" />
-        </button>
       </header>
       <main className="content"><FeatureBoundary key={`${auth.session?.user.id}:${screen}`}>
         {screen === "home" ? (

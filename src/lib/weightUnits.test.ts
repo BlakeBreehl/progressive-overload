@@ -18,7 +18,7 @@ describe('display conversion and unit-independent comparisons',()=>{
  });
  it('keeps Strength graph events invariant under unit preference',()=>{
   const rows=[{id:'a',exercise_id:'e',tracking_type:'repetitions' as const,weight:100,weight_unit:'lb' as const,reps:5,set_order:1,load:null,distance:null,distance_unit:null,laps:null,duration_seconds:null,exercise:{id:'e'},workout:{performed_at:'2026-09-01',created_at:'2026-09-01',location:null}},{id:'b',exercise_id:'e',tracking_type:'repetitions' as const,weight:46,weight_unit:'kg' as const,reps:3,set_order:1,load:null,distance:null,distance_unit:null,laps:null,duration_seconds:null,exercise:{id:'e'},workout:{performed_at:'2026-09-02',created_at:'2026-09-02',location:null}}];
-  const before=structuredClone(rows),kg=strengthModePoints(rows,'e','prs',{unit:'kg'}),lb=strengthModePoints(rows,'e','prs',{unit:'lb'});
+  const before=structuredClone(rows),kg=strengthModePoints(rows,'e','all',{unit:'kg'}),lb=strengthModePoints(rows,'e','all',{unit:'lb'});
   expect(kg.map(p=>p.id)).toEqual(lb.map(p=>p.id));expect(kg[0].result).toBe(45.359237);expect(lb[1].result).toBeCloseTo(101.41264,4);expect(rows).toEqual(before);
  });
 });

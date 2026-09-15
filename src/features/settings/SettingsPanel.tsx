@@ -1,3 +1,4 @@
+import {ProgressPrivacy} from '../groups/ProgressPrivacy';
 import {PasswordForm} from '../../components/PasswordManagement';
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -108,7 +109,7 @@ export function SettingsPanel({
       <p className="eyebrow">MAKE IT YOURS</p>
       <h1 className="page-title">Settings</h1>
       <section className="surface-card mt-4"><h2 className="font-bold">Account security</h2>{changingPassword?<PasswordForm client={client} onDone={()=>setChangingPassword(false)}/>:<button className="secondary-button mt-3" onClick={()=>setChangingPassword(true)}>Change Password</button>}</section>
-      <button className="secondary-button mt-4" onClick={()=>window.dispatchEvent(new Event("open-release-announcement"))}>What’s New</button>
+      <ProgressPrivacy client={client} userId={userId}/><button className="secondary-button mt-4" onClick={()=>window.dispatchEvent(new Event("open-release-announcement"))}>What’s New</button>
       <div className="mt-7 max-w-3xl space-y-5">
         <section aria-labelledby="module-visibility">
           <h2
