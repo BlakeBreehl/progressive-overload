@@ -5,8 +5,8 @@ import {readFileSync} from 'node:fs';
 const css=readFileSync(new URL('../index.css',import.meta.url),'utf8');
 import {releaseId} from '../lib/releaseAnnouncement';
 import {bestSet} from '../features/progress/logic';
-it('uses a new launch identity and allows manual reopening without rewriting acknowledgement',()=>{
- expect(releaseId).toBe('progressive-overload-2.0-launch');expect(settings).toContain('open-release-announcement');expect(announcement).toContain("if(request==='automatic')void acknowledgeRelease");expect(announcement).toContain('View Leaderboards');expect(announcement).toContain('Explore 2.0');
+it('uses a new launch identity and allows intentional manual reopening with idempotent acknowledgement',()=>{
+ expect(releaseId).toBe('progressive-overload-2.0-launch');expect(settings).toContain('open-release-announcement');expect(announcement).toContain("await acknowledgeRelease(client,userId)");expect(announcement).toContain('View Leaderboards');expect(announcement).toContain('Explore 2.0');
 });
 it('waits behind other dialogs and respects reduced motion',()=>{
  expect(announcement).toContain('MutationObserver');expect(announcement).toContain('[role="dialog"],[role="alertdialog"]');expect(css).toContain('@media(prefers-reduced-motion:reduce){.release-hero{animation:none}}');

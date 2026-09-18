@@ -1,7 +1,7 @@
-export type TimeAxisMode="auto"|"weekly"|"monthly";
+export type TimeAxisMode="auto"|"weekly"|"monthly"|"yearly";
 const parts=(value:string)=>value.slice(0,10).split("-").map(Number),ordinal=(value:string)=>{const[y,m,d=1]=parts(value);return Date.UTC(y,m-1,d)/86400000};
 export const timeTickLimit=(width:number)=>width<=480?4:width<=900?6:8;
 export function selectTimeTicks(values:string[],limit:number){const unique=[...new Set(values)];if(unique.length<=limit)return unique;if(limit<=1)return unique.slice(0,1);return[...new Set(Array.from({length:limit},(_,index)=>unique[Math.round(index*(unique.length-1)/(limit-1))]))]}
-export function compactTimeLabel(value:string,values:string[],mode:TimeAxisMode="auto"){const[y,m,d=1]=parts(value);if(mode==="weekly")return`${m}/${d}`;if(mode==="monthly")return`${m}/${y}`;const span=values.length>1?ordinal(values.at(-1)!)-ordinal(values[0]):0;return span<=31?`${m}/${d}`:span>1095?String(y):`${m}/${y}`}
+export function compactTimeLabel(value:string,values:string[],mode:TimeAxisMode="auto"){const[y,m,d=1]=parts(value);if(mode==="yearly")return String(y);if(mode==="weekly")return`${m}/${d}`;if(mode==="monthly")return`${m}/${y}`;const span=values.length>1?ordinal(values.at(-1)!)-ordinal(values[0]):0;return span<=31?`${m}/${d}`:span>1095?String(y):`${m}/${y}`}
 export function selectFormattedTimeTicks(values:string[],limit:number,mode:TimeAxisMode="auto"){const seen=new Set<string>();return selectTimeTicks(values,limit).filter(value=>{const label=compactTimeLabel(value,values,mode);if(seen.has(label))return false;seen.add(label);return true})}
 export function fullLocalDateLabel(value:string){const[y,m,d=1]=parts(value);return new Date(y,m-1,d,12).toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"})}

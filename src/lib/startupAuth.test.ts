@@ -34,3 +34,7 @@ describe('startup sequencing without refresh',()=>{
     const f=fixture();f.getUser.mockResolvedValue({data:{user:{id:'a'}},error:null});f.event('a');f.jobs.shift()!();await flush();const count=f.states.length;f.event('a');expect(f.states.slice(count).every(state=>!state.loading)).toBe(true);
   });
 });
+
+it('deduplicates auth events while validation is pending',async()=>{const f=fixture();f.getUser.mockResolvedValue({data:{user:{id:'a'}},error:null});f.event('a');f.event('a');expect(f.jobs).toHaveLength(1);f.jobs.shift()!();await flush();expect(f.getUser).toHaveBeenCalledOnce();expect(f.states.at(-1)?.session?.user.id).toBe('a');});
+it('ignores validation resolving after sign-out',async()=>{const f=fixture(),pending=deferred();f.getUser.mockReturnValue(pending.promise);f.event('a');f.jobs.shift()!();f.event(null);pending.resolve({data:{user:{id:'a'}},error:null});await flush();expect(f.states.at(-1)).toEqual({session:null,loading:false,error:''});});
+it('does not retry a schema/permission error as a network error',async()=>{const f=fixture();f.getUser.mockResolvedValue({error:{code:'42501'}});f.event('a');f.jobs.shift()!();await flush();expect(f.getUser).toHaveBeenCalledOnce();expect(f.states.at(-1)?.error).toBeTruthy();});

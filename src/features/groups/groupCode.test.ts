@@ -36,5 +36,5 @@ it('retains network/session recovery without leaking codes in errors',async()=>{
 });
 it('removes legacy workflows and leaves replacement within group management',()=>{
  expect(frontend).not.toMatch(/Generate Code|Generate \/ Rotate|Disable joining|setInvite|inviteCode|location.hash|#invite|expires in|seven days/);
- expect(frontend).toContain('Manage group');expect(frontend).toContain('Replace Group Code');expect(frontend).toContain('Friends can enter this code in Progressive Overload to join.');expect(frontend).toContain('key={props.userId}');expect(frontend).toContain('onChange={event=>setCode(event.target.value)}');expect(frontend).toContain('autoComplete="one-time-code"');
+ expect(frontend).toContain('Manage Group');expect(frontend).toContain('Replace Group Code');expect(frontend).toContain('Friends can enter this code in Progressive Overload to join.');expect(frontend).toContain('key={props.userId}');expect(frontend).toContain('onChange={event=>setCode(event.target.value)}');expect(frontend).toContain('autoComplete="one-time-code"');
 });

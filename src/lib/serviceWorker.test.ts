@@ -1,0 +1,12 @@
+import {expect,it,vi} from 'vitest';
+import {runInNewContext} from 'node:vm';
+import source from '../../public/sw.js?raw';
+function fixture(){
+ const events:Record<string,(event:any)=>void>={},put=vi.fn(),remove=vi.fn(),match=vi.fn(),fetch=vi.fn();
+ runInNewContext(source,{URL,fetch,self:{location:{origin:'https://local.test'},addEventListener:(name:string,callback:typeof events[string])=>events[name]=callback,skipWaiting:vi.fn(),clients:{claim:vi.fn()}},caches:{open:async()=>({put,addAll:vi.fn()}),keys:async()=>['unrelated-cache','progressive-overload-shell-v5','progressive-overload-shell-v6'],delete:remove,match}});
+ return {events,put,remove,match,fetch};
+}
+it('never intercepts auth/API/Supabase or non-GET traffic',()=>{const f=fixture();for(const path of ['/auth/token','/rest/v1/profiles','/api/profile','/functions/v1/test','/storage/v1/test','https://fixture.supabase.co/rest/v1/test','/?access_token=fixture']){const respondWith=vi.fn();f.events.fetch({request:{url:path.startsWith('https:')?path:'https://local.test'+path,method:'GET',mode:'navigate'},respondWith});expect(respondWith).not.toHaveBeenCalled();}const respondWith=vi.fn();f.events.fetch({request:{url:'https://local.test/',method:'POST',mode:'navigate'},respondWith});expect(respondWith).not.toHaveBeenCalled();});
+it('falls back to cached shell offline without an API cache',async()=>{const f=fixture();f.fetch.mockRejectedValue(new TypeError('Network request failed'));f.match.mockResolvedValueOnce(undefined).mockResolvedValueOnce('shell');let response:Promise<unknown>|undefined;f.events.fetch({request:{url:'https://local.test/progress',method:'GET',mode:'navigate'},respondWith:(value:Promise<unknown>)=>response=value});expect(await response).toBe('shell');expect(f.match).toHaveBeenLastCalledWith('/');});
+it('does not cache HTML returned for a stale JavaScript chunk',async()=>{const f=fixture();f.fetch.mockResolvedValue({ok:true,headers:{get:()=> 'text/html'},clone:()=>({})});let response:Promise<unknown>|undefined;f.events.fetch({request:{url:'https://local.test/assets/old.js',method:'GET',mode:'cors'},respondWith:(value:Promise<unknown>)=>response=value});await response;expect(f.put).not.toHaveBeenCalled();});
+it('removes only old application caches during activation',async()=>{const f=fixture();let done:Promise<unknown>|undefined;f.events.activate({waitUntil:(value:Promise<unknown>)=>done=value});await done;expect(f.remove).toHaveBeenCalledExactlyOnceWith('progressive-overload-shell-v5');});

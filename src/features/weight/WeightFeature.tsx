@@ -1,3 +1,4 @@
+import {safeSupabaseDiagnostic} from "../../lib/supabaseError";
 import { displayWeight, normalizeReadings } from "../../lib/weightUnits";
 import { bodyweightChart, defaultLineStyle, lineType, type LineStyle } from "./chart";
 import { readingChanges } from "./readingChanges";
@@ -124,7 +125,7 @@ export function WeightFeature({
       setItems(await loadWeighIns(client,userId));
       setError("");
     } catch (e) {
-      console.error("Weight load failed", e);
+      safeSupabaseDiagnostic("Bodyweight","load readings",e);
       setError(
         "Bodyweight data could not load. Check your connection and retry.",
       );

@@ -1,0 +1,418 @@
+[
+  {
+    "mode": "android-browser",
+    "width": 390,
+    "height": 844,
+    "checks": [
+      {
+        "name": "waits for authenticated bootstrap",
+        "pass": true
+      },
+      {
+        "name": "slow state load does not flash",
+        "pass": true
+      },
+      {
+        "name": "first eligible account sees announcement",
+        "pass": true
+      },
+      {
+        "name": "failed save stays open with retry and does not complete",
+        "pass": true
+      },
+      {
+        "name": "retry saves before closing",
+        "pass": true
+      },
+      {
+        "name": "route change does not reopen",
+        "pass": true
+      },
+      {
+        "name": "token refresh does not reopen",
+        "pass": true
+      },
+      {
+        "name": "component remount reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "cold start reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "PWA/browser reopen reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "clearing local cache still honors server dismissal",
+        "pass": true
+      },
+      {
+        "name": "B has independent unseen state",
+        "pass": true
+      },
+      {
+        "name": "switching back to A stays dismissed",
+        "pass": true
+      },
+      {
+        "name": "sign-out unmounts in-memory state",
+        "pass": true
+      },
+      {
+        "name": "sign-in restores server dismissal",
+        "pass": true
+      },
+      {
+        "name": "load failure is safe and retryable",
+        "pass": true
+      },
+      {
+        "name": "load retry resumes eligibility",
+        "pass": true
+      },
+      {
+        "name": "completion saves before navigating",
+        "pass": true
+      },
+      {
+        "name": "intentional What?s New remains available",
+        "pass": true
+      },
+      {
+        "name": "second document initially sees unseen A",
+        "pass": true
+      },
+      {
+        "name": "browser storage event dismisses both documents",
+        "pass": true
+      },
+      {
+        "name": "cross-tab dismissal wins over stale initial lookup",
+        "pass": true
+      },
+      {
+        "name": "no native alert confirm prompt",
+        "pass": true
+      },
+      {
+        "name": "client never submits an account ID",
+        "pass": true
+      }
+    ],
+    "failures": []
+  },
+  {
+    "mode": "android-standalone",
+    "width": 390,
+    "height": 844,
+    "checks": [
+      {
+        "name": "waits for authenticated bootstrap",
+        "pass": true
+      },
+      {
+        "name": "slow state load does not flash",
+        "pass": true
+      },
+      {
+        "name": "first eligible account sees announcement",
+        "pass": true
+      },
+      {
+        "name": "failed save stays open with retry and does not complete",
+        "pass": true
+      },
+      {
+        "name": "retry saves before closing",
+        "pass": true
+      },
+      {
+        "name": "route change does not reopen",
+        "pass": true
+      },
+      {
+        "name": "token refresh does not reopen",
+        "pass": true
+      },
+      {
+        "name": "component remount reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "cold start reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "PWA/browser reopen reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "clearing local cache still honors server dismissal",
+        "pass": true
+      },
+      {
+        "name": "B has independent unseen state",
+        "pass": true
+      },
+      {
+        "name": "switching back to A stays dismissed",
+        "pass": true
+      },
+      {
+        "name": "sign-out unmounts in-memory state",
+        "pass": true
+      },
+      {
+        "name": "sign-in restores server dismissal",
+        "pass": true
+      },
+      {
+        "name": "load failure is safe and retryable",
+        "pass": true
+      },
+      {
+        "name": "load retry resumes eligibility",
+        "pass": true
+      },
+      {
+        "name": "completion saves before navigating",
+        "pass": true
+      },
+      {
+        "name": "intentional What?s New remains available",
+        "pass": true
+      },
+      {
+        "name": "second document initially sees unseen A",
+        "pass": true
+      },
+      {
+        "name": "browser storage event dismisses both documents",
+        "pass": true
+      },
+      {
+        "name": "cross-tab dismissal wins over stale initial lookup",
+        "pass": true
+      },
+      {
+        "name": "no native alert confirm prompt",
+        "pass": true
+      },
+      {
+        "name": "client never submits an account ID",
+        "pass": true
+      }
+    ],
+    "failures": []
+  },
+  {
+    "mode": "ios-browser-emulated",
+    "width": 390,
+    "height": 844,
+    "checks": [
+      {
+        "name": "waits for authenticated bootstrap",
+        "pass": true
+      },
+      {
+        "name": "slow state load does not flash",
+        "pass": true
+      },
+      {
+        "name": "first eligible account sees announcement",
+        "pass": true
+      },
+      {
+        "name": "failed save stays open with retry and does not complete",
+        "pass": true
+      },
+      {
+        "name": "retry saves before closing",
+        "pass": true
+      },
+      {
+        "name": "route change does not reopen",
+        "pass": true
+      },
+      {
+        "name": "token refresh does not reopen",
+        "pass": true
+      },
+      {
+        "name": "component remount reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "cold start reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "PWA/browser reopen reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "clearing local cache still honors server dismissal",
+        "pass": true
+      },
+      {
+        "name": "B has independent unseen state",
+        "pass": true
+      },
+      {
+        "name": "switching back to A stays dismissed",
+        "pass": true
+      },
+      {
+        "name": "sign-out unmounts in-memory state",
+        "pass": true
+      },
+      {
+        "name": "sign-in restores server dismissal",
+        "pass": true
+      },
+      {
+        "name": "load failure is safe and retryable",
+        "pass": true
+      },
+      {
+        "name": "load retry resumes eligibility",
+        "pass": true
+      },
+      {
+        "name": "completion saves before navigating",
+        "pass": true
+      },
+      {
+        "name": "intentional What?s New remains available",
+        "pass": true
+      },
+      {
+        "name": "second document initially sees unseen A",
+        "pass": true
+      },
+      {
+        "name": "browser storage event dismisses both documents",
+        "pass": true
+      },
+      {
+        "name": "cross-tab dismissal wins over stale initial lookup",
+        "pass": true
+      },
+      {
+        "name": "no native alert confirm prompt",
+        "pass": true
+      },
+      {
+        "name": "client never submits an account ID",
+        "pass": true
+      }
+    ],
+    "failures": []
+  },
+  {
+    "mode": "ios-standalone-emulated",
+    "width": 390,
+    "height": 844,
+    "checks": [
+      {
+        "name": "waits for authenticated bootstrap",
+        "pass": true
+      },
+      {
+        "name": "slow state load does not flash",
+        "pass": true
+      },
+      {
+        "name": "first eligible account sees announcement",
+        "pass": true
+      },
+      {
+        "name": "failed save stays open with retry and does not complete",
+        "pass": true
+      },
+      {
+        "name": "retry saves before closing",
+        "pass": true
+      },
+      {
+        "name": "route change does not reopen",
+        "pass": true
+      },
+      {
+        "name": "token refresh does not reopen",
+        "pass": true
+      },
+      {
+        "name": "component remount reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "cold start reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "PWA/browser reopen reads durable server result",
+        "pass": true
+      },
+      {
+        "name": "clearing local cache still honors server dismissal",
+        "pass": true
+      },
+      {
+        "name": "B has independent unseen state",
+        "pass": true
+      },
+      {
+        "name": "switching back to A stays dismissed",
+        "pass": true
+      },
+      {
+        "name": "sign-out unmounts in-memory state",
+        "pass": true
+      },
+      {
+        "name": "sign-in restores server dismissal",
+        "pass": true
+      },
+      {
+        "name": "load failure is safe and retryable",
+        "pass": true
+      },
+      {
+        "name": "load retry resumes eligibility",
+        "pass": true
+      },
+      {
+        "name": "completion saves before navigating",
+        "pass": true
+      },
+      {
+        "name": "intentional What?s New remains available",
+        "pass": true
+      },
+      {
+        "name": "second document initially sees unseen A",
+        "pass": true
+      },
+      {
+        "name": "browser storage event dismisses both documents",
+        "pass": true
+      },
+      {
+        "name": "cross-tab dismissal wins over stale initial lookup",
+        "pass": true
+      },
+      {
+        "name": "no native alert confirm prompt",
+        "pass": true
+      },
+      {
+        "name": "client never submits an account ID",
+        "pass": true
+      }
+    ],
+    "failures": []
+  }
+]

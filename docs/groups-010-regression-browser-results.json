@@ -1,0 +1,30 @@
+[
+  {
+    "mode": "android-browser",
+    "width": 390,
+    "height": 844,
+    "checks": 1381,
+    "failures": []
+  },
+  {
+    "mode": "android-standalone",
+    "width": 390,
+    "height": 844,
+    "checks": 1381,
+    "failures": []
+  },
+  {
+    "mode": "ios-browser-emulated",
+    "width": 390,
+    "height": 844,
+    "checks": 1381,
+    "failures": []
+  },
+  {
+    "mode": "ios-standalone-emulated",
+    "width": 390,
+    "height": 844,
+    "checks": 1381,
+    "failures": []
+  }
+]

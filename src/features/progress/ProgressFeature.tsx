@@ -1,3 +1,6 @@
+import {SetsByMuscleGroup} from "../strength/SetsByMuscleGroup";
+import {distanceMiles} from "../../lib/distanceUnits";
+import {orderPerformed} from "../../lib/performedOrder";
 import {StrengthPointMarker} from './StrengthPointMarker';
 import {exerciseTableRows,defaultExerciseSort,type ExerciseSort} from './exerciseSort';
 import {Pagination} from '../../components/Pagination';
@@ -47,6 +50,7 @@ type HistoricalRow = {
 type CardioRow = {
   id: string;
   performed_at: string;
+  created_at?: string;
   duration_seconds: number;
   distance: number | null;
   distance_unit: string | null;
@@ -201,7 +205,7 @@ function StrengthTable({
   const [value,setValue]=useState(""),[sort,setSort]=useState<ExerciseSort>(defaultExerciseSort),[page,setPage]=useState(1);
   const result=exerciseTableRows(exercises,points,{periods,yearly,search:value,sort,page}),shown=result.items;
   return (
-    <div className="surface-card overflow-x-auto">
+    <div className="surface-card overflow-x-auto" role="region" aria-label={`${title}; scroll horizontally for all columns`} tabIndex={0}>
       <div className="sticky left-0 flex flex-wrap items-center justify-between gap-2 bg-white">
         <h3 className="font-display font-bold text-ink">{title}</h3>
         <input
@@ -350,7 +354,7 @@ export function StrengthProgress({
         </h2>
         <div className="mt-3 h-80">
           {chart.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer minWidth={0}>
               <LineChart data={chart}>
                 <CartesianGrid stroke="#e5e5e5" strokeDasharray="3 3" />
                 <TimeXAxis dates={chart.map(point=>point.date)} values={chart.map(point=>point.id)} dataKey="id" />
@@ -372,6 +376,7 @@ export function StrengthProgress({
         </div>
       </div>
       {activePoint&&<div role="status" aria-live="polite"><StrengthTooltip active unit={chartUnit} payload={[{name:lineLabel,value:activePoint.result,payload:activePoint}]}/><button className="text-button" onClick={()=>setActiveSet(null)}>Close set details</button></div>}
+      <SetsByMuscleGroup rows={rows} start={axisDates.start} end={axisDates.end} location={location}/>
       <StrengthTable
         unit={unit}
         title="Monthly — last 12 calendar months"
@@ -392,6 +397,9 @@ export function StrengthProgress({
 }
 
 type CardioPoint = {
+  id:string;
+  performed_at:string;
+  created_at?:string;
   date: string;
   name: string;
     location?: string;
@@ -404,7 +412,7 @@ type CardioPoint = {
   incline?: number;
   difficulty?: number;
 };
-function CardioProgress({ rows }: { rows: CardioRow[] }) {
+export function CardioProgress({ rows }: { rows: CardioRow[] }) {
   const [metric,setMetric]=useState<"duration"|"distance"|"speed"|"pace">("duration");
   const points: CardioPoint[] = rows.map((row) => {
       const name =
@@ -422,13 +430,14 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
           row.duration_seconds,
         );
       return {
+        id:row.id,performed_at:row.performed_at,created_at:row.created_at,
         date: date(row.performed_at),
         name,
         location,
         locationId: row.location_id ?? "",
         duration: row.duration_seconds,
-        distance: metrics?.distanceMiles ?? row.distance ?? undefined,
-        unit: metrics ? "miles" : (row.distance_unit ?? undefined),
+        distance: distanceMiles(row.distance,row.distance_unit) ?? undefined,
+        unit: "mi",
         speed: metrics?.speedMph ?? row.speed ?? undefined,
         pace: metrics?.paceSecondsPerMile,
         incline: row.incline ?? undefined,
@@ -441,9 +450,9 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
     [location, setLocation] = useState(""),
     cardioDates=rangeDates(axes),activity = selected || names[0] || "",
     locations = [...new Map(points.filter((point) => point.locationId).map((point) => [point.locationId, point.location!])).entries()],
-    visible = chronological(points.filter(
+    visible = orderPerformed(points.filter(
       (point) => point.name === activity && within(point.date, cardioDates.start, cardioDates.end) && (!location || (location === "__none__" ? !point.locationId : point.locationId === location)),
-    ), (point) => point.date),
+    )),
     chart = visible.map((point) => ({
       ...point,
       durationMinutes: point.duration / 60,
@@ -452,7 +461,7 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
     weekly = aggregateCardio(visible, "week"),
     monthly = aggregateCardio(visible, "month"),metricValues=chart.flatMap(point=>point[metric]===undefined?[]:[point[metric]!]),cardioDomain=paddedDomain(metricValues,axes);
   const table = (title: string, items: ReturnType<typeof aggregateCardio>) => (
-    <div className="surface-card overflow-x-auto">
+    <div className="surface-card overflow-x-auto" role="region" aria-label={`${title}; scroll horizontally for all columns`} tabIndex={0}>
       <h3 className="font-display font-bold text-ink">{title}</h3>
       <table className="progress-table mt-3">
         <thead>
@@ -503,7 +512,7 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
         </h2>
         <div className="mt-3 h-80">
           {chart.length ? (
-            <ResponsiveContainer>
+            <ResponsiveContainer minWidth={0}>
               <LineChart data={chart}>
                 <CartesianGrid stroke="#e5e5e5" />
                 <TimeXAxis dates={chart.map(point=>point.date)} />
@@ -515,7 +524,7 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
                         <strong>
                           {activity} · {fullLocalDateLabel(String(label))}
                         </strong>
-                        <p>Duration: {duration(payload[0].payload.duration)}</p>
+                        <p>Performed: {payload[0].payload.performed_at.length>10?new Date(payload[0].payload.performed_at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Date only"}</p><p>Duration: {duration(payload[0].payload.duration)}</p>
                         {payload[0].payload.distance != null && (
                           <p>
                             Distance: {payload[0].payload.distance.toFixed(2)}{" "}
@@ -559,12 +568,12 @@ function CardioProgress({ rows }: { rows: CardioRow[] }) {
   );
 }
 
-function FlexProgress({ rows }: { rows: FlexRow[] }) {
+export function FlexProgress({ rows }: { rows: FlexRow[] }) {
   const [timeAxes, setTimeAxes] = useState(defaultAxisSettings),
     [repAxes, setRepAxes] = useState(defaultAxisSettings),
     [stretch, setStretch] = useState(""),
     [body, setBody] = useState("");
-  const parsed = rows.map((row) => {
+  const parsed = orderPerformed(rows).map((row) => {
       const activity = relationObject<{
           name: string;
           tracking_type: "time" | "reps";
@@ -633,7 +642,7 @@ function FlexProgress({ rows }: { rows: FlexRow[] }) {
           {kind === "reps" && <ChartControls settings={repAxes} setSettings={setRepAxes} unit="reps"/>}
           <div className="mt-3 h-64">
             {(items as typeof visible).length ? (
-              <ResponsiveContainer>
+              <ResponsiveContainer minWidth={0}>
                 <LineChart data={items as typeof visible}>
                   <CartesianGrid stroke="#e5e5e5" />
                   <TimeXAxis dates={(items as typeof visible).map(item=>item.date)} />
@@ -696,13 +705,13 @@ export function ProgressFeature({
           ? client
               .from("cardio_sessions")
               .select(
-                "id,performed_at,duration_seconds,distance,distance_unit,speed,incline,difficulty,location_id,activity:cardio_activities!cardio_activity_owned_fk(name),location:locations!cardio_location_owned_fk(name)",
+                "id,performed_at,created_at,duration_seconds,distance,distance_unit,speed,incline,difficulty,location_id,activity:cardio_activities!cardio_activity_owned_fk(name),location:locations!cardio_location_owned_fk(name)",
               )
               .eq("user_id", userId)
           : client
               .from("mobility_sessions")
               .select(
-                "id,performed_at,activity_id,activity:mobility_activities!mobility_activity_owned_fk(name,tracking_type,areas:mobility_activity_area_assignments!mobility_area_owned_fk(body_area)),sets:mobility_sets!mobility_sets_session_owned_fk(duration_seconds,reps)",
+                "id,performed_at,created_at,activity_id,activity:mobility_activities!mobility_activity_owned_fk(name,tracking_type,areas:mobility_activity_area_assignments!mobility_area_owned_fk(body_area)),sets:mobility_sets!mobility_sets_session_owned_fk(duration_seconds,reps)",
               )
               .eq("user_id", userId);
     query.then((result) => {
@@ -725,7 +734,7 @@ export function ProgressFeature({
     <section>
       <p className="eyebrow">STATISTICS CENTER</p>
       <h1 className="page-title">Progress</h1>
-      <div className="mt-5 flex gap-2 overflow-x-auto">
+      <div className="progress-tabs mt-5 flex gap-2">
         {tabs.map((tab) => (
           <button
             className={selected === tab ? "primary-button" : "secondary-button"}

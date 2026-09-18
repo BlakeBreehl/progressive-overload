@@ -1,9 +1,11 @@
+import {watchConnectionRecovery} from "./lib/connectionRecovery";
+import {retryableLazy as lazy} from "./lib/retryableLazy";
+import {startAccountBootstrap} from "./lib/accountBootstrap";
 import { MobileNavigation } from "./components/MobileNavigation";
 import { FeatureBoundary } from "./components/FeatureBoundary";
 import { dataLoadMessage } from "./lib/supabaseError";
 import { ReleaseAnnouncement } from "./components/ReleaseAnnouncement";
 import {
-  lazy,
   Suspense,
   useEffect,
   useMemo,
@@ -23,7 +25,7 @@ import { useAuth } from "./lib/authContext";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import {
   completeOnboarding,
-  loadUserSetupWithRetry,
+  transientSetupError,
   saveModuleSettings,
 } from "./lib/settings";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
@@ -491,6 +493,7 @@ function App() {
   const [enabled, setEnabled] = useState<ModuleState>(defaultModules),
     [loadedUserId, setLoadedUserId] = useState<string | null>(null),
     [setupError, setSetupError] = useState(""),
+    [setupRecoverable,setSetupRecoverable]=useState(false),
     [setupAttempt,setSetupAttempt]=useState(0),
     [weightUnit, setWeightUnit] = useState<"lb" | "kg">("lb");
   useEffect(() => {
@@ -501,30 +504,18 @@ function App() {
   }, []);
   const setupUserId=auth.session?.user.id;
   useEffect(() => {
-    if (!setupUserId || !supabase) return;
+    if (!setupUserId || !supabase) {queueMicrotask(()=>{setLoadedUserId(null);setSetupError("");setEnabled(defaultModules);setOnboarded(false);setWeightUnit("lb");setAddOpen(false);});return;}
     let active = true;
     const userId = setupUserId;
     queueMicrotask(()=>{if(active){setLoadedUserId(null);setSetupError("")}});
-    loadUserSetupWithRetry(supabase, userId)
-      .then((setup) => {
-        if (active) {
-          setEnabled(setup.modules);
-          setOnboarded(setup.onboardingCompleted);
-          setWeightUnit(setup.preferredWeightUnit);
-          setSetupError("");
-        }
-      })
-      .catch((error) => {
-        if (active)
-          setSetupError(dataLoadMessage("Account setup",error));
-      })
-      .finally(() => {
-        if (active) setLoadedUserId(userId);
-      });
-    return () => {
-      active = false;
-    };
+    const stop=startAccountBootstrap(supabase,userId,({setup,error})=>{
+      if(setup){setEnabled(setup.modules);setOnboarded(setup.onboardingCompleted);setWeightUnit(setup.preferredWeightUnit);setSetupError("");setSetupRecoverable(false);}
+      else {setSetupRecoverable(transientSetupError(error));setSetupError(dataLoadMessage("Account setup",error));}
+      setLoadedUserId(userId);
+    });
+    return()=>{active=false;stop();};
   }, [setupUserId,setupAttempt]);
+  useEffect(()=>{if(!setupUserId||!setupError||!setupRecoverable)return;return watchConnectionRecovery(()=>setSetupAttempt(value=>value+1));},[setupUserId,setupError,setupRecoverable]);
   const nav = useMemo(
     () => [
       { key: "home" as Screen, label: "Home", icon: "home" },

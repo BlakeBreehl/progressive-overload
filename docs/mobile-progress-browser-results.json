@@ -1,0 +1,476 @@
+{
+  "note": "Local synthetic fixtures only. Chromium iOS/standalone profiles are emulation. Windows WebKit does not expose the iOS-only touch-callout capability. No live Supabase authentication or records.",
+  "runs": {
+    "chromiumMobile": [
+      {
+        "mode": "android-browser",
+        "width": 320,
+        "height": 568,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 360,
+        "height": 640,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 375,
+        "height": 667,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 375,
+        "height": 812,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 390,
+        "height": 844,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 393,
+        "height": 852,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 412,
+        "height": 915,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 430,
+        "height": 932,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-browser",
+        "width": 667,
+        "height": 375,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 320,
+        "height": 568,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 360,
+        "height": 640,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 375,
+        "height": 667,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 375,
+        "height": 812,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 390,
+        "height": 844,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 393,
+        "height": 852,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 412,
+        "height": 915,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 430,
+        "height": 932,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "android-standalone",
+        "width": 667,
+        "height": 375,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 320,
+        "height": 568,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 360,
+        "height": 640,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 375,
+        "height": 667,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 375,
+        "height": 812,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 390,
+        "height": 844,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 393,
+        "height": 852,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 412,
+        "height": 915,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 430,
+        "height": 932,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-browser-emulated",
+        "width": 667,
+        "height": 375,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 320,
+        "height": 568,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 360,
+        "height": 640,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 375,
+        "height": 667,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 375,
+        "height": 812,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 390,
+        "height": 844,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 393,
+        "height": 852,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 412,
+        "height": 915,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 430,
+        "height": 932,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "ios-standalone-emulated",
+        "width": 667,
+        "height": 375,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      }
+    ],
+    "chromiumTabletDesktop": [
+      {
+        "mode": "chromium",
+        "width": 768,
+        "height": 1024,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "mode": "chromium",
+        "width": 1280,
+        "height": 900,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      }
+    ],
+    "webkit": [
+      {
+        "width": 320,
+        "height": 568,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 360,
+        "height": 640,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 375,
+        "height": 667,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 375,
+        "height": 812,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 393,
+        "height": 852,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 412,
+        "height": 915,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 430,
+        "height": 932,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 667,
+        "height": 375,
+        "webkitTouch": false,
+        "coarse": true,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      },
+      {
+        "width": 1280,
+        "height": 900,
+        "webkitTouch": false,
+        "coarse": false,
+        "checks": 185,
+        "failures": [],
+        "offenders": []
+      }
+    ],
+    "focused": [
+      {
+        "mode": "chromium",
+        "width": 320,
+        "height": 568,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 360,
+        "height": 640,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 375,
+        "height": 667,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 375,
+        "height": 812,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 390,
+        "height": 844,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 393,
+        "height": 852,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 412,
+        "height": 915,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 430,
+        "height": 932,
+        "checks": 1381,
+        "failures": []
+      },
+      {
+        "mode": "chromium",
+        "width": 667,
+        "height": 375,
+        "checks": 1381,
+        "failures": []
+      }
+    ]
+  },
+  "summary": {
+    "cases": 57,
+    "fixtureAssertions": 21309,
+    "failures": 0,
+    "webkitRotationChecks": 10
+  }
+}

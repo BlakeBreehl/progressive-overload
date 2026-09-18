@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Select } from '../../components/SelectionControls';
-import { loadSetBreakdown } from './setBreakdown';
-const colors=['#dc2626','#15803d','#2563eb','#111111','#ea580c','#9333ea','#0891b2'];
+import { loadSetBreakdown, setGroupColors as colors } from './setBreakdown';
 export function YourSets({client,userId}:{client:SupabaseClient;userId:string}){
   const [months,setMonths]=useState(1),[attempt,setAttempt]=useState(0),[state,setState]=useState<{key:string;data?:Awaited<ReturnType<typeof loadSetBreakdown>>;error?:string}>({key:''});
   const key=`${userId}:${months}:${attempt}`;

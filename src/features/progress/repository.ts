@@ -4,7 +4,7 @@ export type StrengthProgressRow={weight_unit?:"lb"|"kg";id?:string;set_order?:nu
 export async function loadStrengthProgressRows(client:SupabaseClient,userId:string){
  const rows:StrengthProgressRow[]=[];
  for(let offset=0;;offset+=500){
-  const{data,error}=await client.from("strength_sets").select("id,set_order,exercise_id,tracking_type,weight,weight_unit,reps,load,distance,distance_unit,laps,duration_seconds,exercise:exercises!strength_set_exercise_type_owned_fk(id,name,tracking_type),workout:strength_workouts!strength_set_workout_owned_fk(id,performed_at,created_at,location:locations!strength_workout_location_owned_fk(id,name))").eq("user_id",userId).order("id").range(offset,offset+499);
+  const{data,error}=await client.from("strength_sets").select("id,set_order,exercise_id,tracking_type,weight,weight_unit,reps,load,distance,distance_unit,laps,duration_seconds,exercise:exercises!strength_set_exercise_type_owned_fk(id,name,tracking_type,major_muscle_group),workout:strength_workouts!strength_set_workout_owned_fk(id,performed_at,created_at,location:locations!strength_workout_location_owned_fk(id,name))").eq("user_id",userId).order("id").range(offset,offset+499);
   if(error)throw error;rows.push(...(data??[]) as StrengthProgressRow[]);if((data??[]).length<500)return rows;
  }
 }

@@ -11,10 +11,7 @@ export const mondayOf=(day:string)=>{const date=parseDay(day);return shiftDay(da
 const mean=(values:number[])=>values.reduce((total,value)=>total+value/values.length,0);
 const finite=(value:number)=>Number.isFinite(value)?value:null;
 export function weekLabel(monday:string){
- const start=parseDay(monday),end=parseDay(shiftDay(monday,6));
- const month=(date:Date)=>date.toLocaleDateString('en-US',{month:'short'});
- if(start.getFullYear()!==end.getFullYear())return month(start)+' '+start.getDate()+', '+start.getFullYear()+' ? '+month(end)+' '+end.getDate()+', '+end.getFullYear();
- return month(start)+' '+start.getDate()+'?'+(start.getMonth()===end.getMonth()?'':month(end)+' ')+end.getDate()+', '+end.getFullYear();
+ return 'Week of '+parseDay(monday).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
 /** Normalize copies before daily means; missing days/weeks never become zero.
  * Build all weekly evidence before range filtering, so the first visible week
@@ -37,7 +34,7 @@ export function weeklySummaries(readings:Reading[],unit:WeightUnit,period:Readin
   return {key,label:weekLabel(key),average,change,percentChange:previous===undefined||previous===0||change===null?null:finite(change/previous*100),measuredDays:weeks.get(key)!.length,partial:key===mondayOf(dayKey(now))};
  });
 }
-/** Rolling calendar-month window, expanded to complete Monday?Sunday weeks. */
+/** Rolling calendar-month window, expanded to complete Monday-Sunday weeks. */
 export function weeklyPage(rows:WeeklySummary[],range:WeeklyRange,page=1,now=new Date()){
  const cutoff=new Date(now);cutoff.setDate(1);
  if(range!=='all')cutoff.setMonth(cutoff.getMonth()-Number(range));
@@ -48,7 +45,7 @@ export function weeklyPage(rows:WeeklySummary[],range:WeeklyRange,page=1,now=new
  return {items:filtered.slice(offset,offset+12),total,pages,page:current,start:total?offset+1:0,end:Math.min(offset+12,total)};
 }
 export function weeklyNumber(value:number|null,decimals:number,signed=false){
- if(value===null||!Number.isFinite(value))return '?';
+ if(value===null||!Number.isFinite(value))return '\u2014';
  const rounded=Number(value.toFixed(decimals));
  return (signed&&rounded>0?'+':'')+(Object.is(rounded,-0)?0:rounded).toFixed(decimals);
 }

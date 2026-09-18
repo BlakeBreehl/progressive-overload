@@ -1,3 +1,4 @@
+import {performedTimestamp} from "../../lib/performedOrder";
 import { comparisonWeight, convertWeight, displayWeight, type WeightUnit } from '../../lib/weightUnits';
 import { localDateKey } from '../strength/logic';
 import { relationObject } from '../../lib/supabaseError';
@@ -15,7 +16,7 @@ function visibleSets(rows:StrengthProgressRow[],exerciseId:string,filters:Filter
   const date=/^\d{4}-\d{2}-\d{2}$/.test(workout.performed_at)?workout.performed_at:localDateKey(workout.performed_at);
   if((filters.start&&date<filters.start)||(filters.end&&date>filters.end)||(filters.location&&(filters.location==='__none__'?!!workout.location:workout.location?.id!==filters.location)))return [];
   return [{...row,workout,date}];
- }).sort((a,b)=>Date.parse(a.workout.performed_at)-Date.parse(b.workout.performed_at)||(Date.parse(a.workout.created_at)||0)-(Date.parse(b.workout.created_at)||0)||(a.set_order??0)-(b.set_order??0)||(a.id??'').localeCompare(b.id??''));
+ }).sort((a,b)=>performedTimestamp(a.workout.performed_at)-performedTimestamp(b.workout.performed_at)||(Date.parse(a.workout.created_at)||0)-(Date.parse(b.workout.created_at)||0)||(a.set_order??0)-(b.set_order??0)||(a.id??'').localeCompare(b.id??''));
 }
 export function defaultStrengthMode(rows:StrengthProgressRow[],exerciseId:string):StrengthMode{
  const sets=visibleSets(rows,exerciseId,{}).filter(eligibleWeight);

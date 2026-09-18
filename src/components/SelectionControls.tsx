@@ -1,9 +1,14 @@
+import {menuPosition} from "./menuPosition";
 import { createPortal } from "react-dom";
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 export type SelectOption = {
   value: string;
@@ -14,19 +19,12 @@ export type SelectOption = {
 const position = (node: HTMLElement | null) => {
   const r = node?.getBoundingClientRect();
   if (!r) return {};
-  const below = innerHeight - r.bottom > 240;
-  return {
-    position: "fixed" as const,
-    left: Math.max(
-      8,
-      Math.min(r.left, innerWidth - Math.max(r.width, 220) - 8),
-    ),
-    top: below ? r.bottom + 6 : undefined,
-    bottom: below ? undefined : innerHeight - r.top + 6,
-    width: Math.max(r.width, 220),
-    maxHeight: Math.min(320, below ? innerHeight - r.bottom - 14 : r.top - 14),
-  };
+  const viewport=window.visualViewport;
+  return menuPosition(r,{left:viewport?.offsetLeft??0,top:viewport?.offsetTop??0,width:viewport?.width??innerWidth,height:viewport?.height??innerHeight,layoutHeight:innerHeight});
 };
+function useMenuPosition(open:boolean,anchor:RefObject<HTMLElement|null>,update:Dispatch<SetStateAction<ReturnType<typeof position>>>){
+  useEffect(()=>{if(!open)return;const sync=()=>update(position(anchor.current));sync();window.addEventListener('resize',sync);window.addEventListener('scroll',sync,true);window.visualViewport?.addEventListener('resize',sync);window.visualViewport?.addEventListener('scroll',sync);return()=>{window.removeEventListener('resize',sync);window.removeEventListener('scroll',sync,true);window.visualViewport?.removeEventListener('resize',sync);window.visualViewport?.removeEventListener('scroll',sync);};},[open,anchor,update]);
+}
 export function Select({
   label,
   value,
@@ -53,6 +51,7 @@ export function Select({
     enabled = options
       .map((x, i) => (!x.disabled ? i : -1))
       .filter((i) => i >= 0);
+  useMenuPosition(open,trigger,setMenuStyle);
   const prepareMenu = () => {
     setActive(
       Math.max(
@@ -194,6 +193,7 @@ export function Combobox({
   footer?: ReactNode;
   autoFocus?: boolean;
 }) {
+  const inputRef=useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState(""),
     [menuStyle, setMenuStyle] = useState<ReturnType<typeof position>>({}),
     filtered = useMemo(
@@ -206,11 +206,15 @@ export function Combobox({
       [options, query],
     ),
     selected = options.find((x) => x.value === value);
+  useMenuPosition(!!query,inputRef,setMenuStyle);
   return (
     <div className="combobox-control">
       <label className="field-label">
         {label}
         <input
+          ref={inputRef}
+          autoComplete="off"
+          enterKeyHint="search"
           autoFocus={autoFocus}
           className="field-input"
           role="combobox"
@@ -284,6 +288,7 @@ export function MultiSelect({
     [open, setOpen] = useState(false),
     [menuStyle, setMenuStyle] = useState<ReturnType<typeof position>>({}),
     button = useRef<HTMLButtonElement>(null);
+  useMenuPosition(open,button,setMenuStyle);
   return (
     <div className="custom-select">
       <span className="field-label" id={`${id}-label`}>

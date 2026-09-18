@@ -1,7 +1,9 @@
 import { useEffect, useEffectEvent, useRef, type ReactNode } from 'react'
+import {observeKeyboardViewport} from '../lib/keyboardViewport';
 
 export function ConfirmDialog({open,title,description,children,confirmLabel,cancelLabel='Cancel',busy=false,error='',destructive=true,onCancel,onConfirm}:{open:boolean;title:string;description:string;children?:ReactNode;confirmLabel:string;cancelLabel?:string;busy?:boolean;error?:string;destructive?:boolean;onCancel:()=>void;onConfirm:()=>void|Promise<void>}) {
   const cancelRef=useRef<HTMLButtonElement>(null),dialogRef=useRef<HTMLDivElement>(null)
+  useEffect(()=>{if(open)return observeKeyboardViewport();},[open]);
   const cancelFromKeyboard=useEffectEvent(()=>{if(!busy)onCancel()});
   useEffect(()=>{if(!open)return;let active=true;const previous=document.activeElement as HTMLElement|null;queueMicrotask(()=>{if(active)cancelRef.current?.focus()});const key=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();cancelFromKeyboard()}if(event.key==='Tab'){const focusable=[...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')??[])];if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1)!;if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}};document.addEventListener('keydown',key);return()=>{active=false;document.removeEventListener('keydown',key);previous?.focus()}},[open])
   if(!open)return null

@@ -1,20 +1,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { safeSupabaseDiagnostic } from './supabaseError';
 export const releaseId='progressive-overload-2.0-launch';
-const shown=new Set<string>();
-const key=(userId:string)=>`${releaseId}:${userId}`;
-export function shownThisSession(userId:string){try{return shown.has(key(userId))||sessionStorage.getItem(key(userId))==='shown';}catch{return shown.has(key(userId));}}
-export function markShown(userId:string){shown.add(key(userId));try{sessionStorage.setItem(key(userId),'shown');}catch{/* Memory still prevents repeated dialogs. */}}
+const eventName='release-dismissed';
+const key=(userId:string)=>releaseId+':'+userId;
+// Storage is a cross-tab notification, never authority for the initial decision.
 export async function shouldAnnounce(client:SupabaseClient,userId:string,ready:boolean){
-  if(!ready||shownThisSession(userId))return false;
-  const {data,error}=await client.from('release_announcements').select('release_id').eq('user_id',userId).eq('release_id',releaseId).maybeSingle();
-  if(error)safeSupabaseDiagnostic('Announcement','read acknowledgement',error);
+  if(!ready||!userId)return false;
+  const {data,error}=await client.rpc('get_release_acknowledgement',{p_release_id:releaseId});
+  if(error||typeof data!=='boolean')throw new Error('Could not check the release announcement. Please retry.');
   return !data;
 }
 export async function acknowledgeRelease(client:SupabaseClient,userId:string){
-  markShown(userId);
-  try{
-    const {error}=await client.from('release_announcements').insert({user_id:userId,release_id:releaseId});
-    if(error&&error.code!=='23505')safeSupabaseDiagnostic('Announcement','save acknowledgement',error);
-  }catch(error){safeSupabaseDiagnostic('Announcement','save acknowledgement',error);}
+  const {error}=await client.rpc('acknowledge_release',{p_release_id:releaseId});
+  if(error)throw new Error('Could not save your dismissal. Please retry.');
+  try{localStorage.setItem(key(userId),'dismissed');}catch{/* Server remains authoritative. */}
+  window.dispatchEvent(new CustomEvent(eventName,{detail:key(userId)}));
+}
+export function subscribeReleaseDismissal(userId:string,onDismiss:()=>void){
+  const storage=(event:StorageEvent)=>{if(event.key===key(userId)&&event.newValue==='dismissed')onDismiss();};
+  const local=(event:Event)=>{if((event as CustomEvent<string>).detail===key(userId))onDismiss();};
+  window.addEventListener('storage',storage);window.addEventListener(eventName,local);
+  return()=>{window.removeEventListener('storage',storage);window.removeEventListener(eventName,local);};
 }

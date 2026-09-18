@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { relationObject } from '../../lib/supabaseError';
 export function setPeriodStart(months:number,now=new Date()){return new Date(now.getFullYear(),now.getMonth()-(months-1),1);}
 export const setGroups=['Chest','Back','Legs','Arms','Shoulders','Core','Olympic/Other'];
+export const setGroupColors=['#dc2626','#15803d','#2563eb','#111111','#ea580c','#9333ea','#0891b2'];
 export function countSetGroups(rows:{id:string;exercise:unknown}[]){
   const seen=new Set<string>(),counts=new Map(setGroups.map(group=>[group,0]));
   for(const row of rows){if(seen.has(row.id))continue;seen.add(row.id);

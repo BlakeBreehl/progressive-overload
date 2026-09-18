@@ -36,3 +36,25 @@
 .mobile-header{background:rgba(255,255,255,.97)}.icon-button{min-width:44px;min-height:44px}
 
 .privacy-switch{display:grid;place-items:center;min-width:52px;min-height:44px;border:0;border-radius:.8rem;background:transparent}.privacy-switch:disabled{opacity:.55;cursor:wait}
+
+/* Intrinsic chart/table widths must not become grid track or document widths. */
+#root,.app-frame,.content,.surface-card{min-width:0;max-width:100%}
+.content :where(.grid,.flex)>*,.field-label,.chart-controls{min-width:0}
+.content section,.content .space-y-5,.content .recharts-responsive-container{min-width:0;max-width:100%}
+.field-input,.select-trigger,.select-option,.picker-row{overflow-wrap:anywhere;max-width:100%}
+.field-input{min-width:0}
+.recharts-tooltip-wrapper{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.select-menu{max-width:calc(100% - 16px)}
+.progress-tabs{flex-wrap:wrap}
+button{touch-action:manipulation}
+/* WebKit touch controls: Safari zooms focused inputs below 16px. Android is unchanged. */
+@supports (-webkit-touch-callout:none){@media (hover:none) and (pointer:coarse) and (max-width:899px){
+ input:not([readonly]):not([type=checkbox]):not([type=radio]):not([type=range]),textarea,[contenteditable=true],[role=combobox]:not(button){font-size:16px!important}
+}}
+.dialog-overlay{top:var(--keyboard-top,0px);bottom:auto;height:var(--keyboard-height,100dvh)}
+.confirm-dialog{max-height:calc(var(--keyboard-height,100dvh) - 2rem);overflow-wrap:anywhere}
+
+.content :where(h1,h2,h3,strong,p),.group-code-card{overflow-wrap:anywhere}
+
+.dialog-overlay{padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left))}
+.confirm-dialog{max-height:calc(var(--keyboard-height,100dvh) - max(1rem,env(safe-area-inset-top)) - max(1rem,env(safe-area-inset-bottom)))}
