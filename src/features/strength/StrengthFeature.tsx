@@ -1,3 +1,4 @@
+import { changeExercise, exerciseChangeWarning, workoutEditDraft } from './exerciseChange';
 import { displayWeight, type WeightUnit } from "../../lib/weightUnits";
 import { YourSets } from "./YourSets";
 import { LocationSelect } from "../../components/LocationSelect";
@@ -46,9 +47,7 @@ import {
 import { QuickLiftForm } from "./QuickLiftForm";
 import { WorkoutCard } from "./WorkoutCard";
 import {
-  isQuickWorkout,
   newQuickLift,
-  quickLiftFromWorkout,
   quickLiftToWorkout,
   validateQuickLift,
   type QuickLiftDraft,
@@ -76,6 +75,7 @@ const emptySet = (exercise: Exercise): StrengthSet =>
         setOrder: 1,
         trackingType: "repetitions",
         loadMode: exercise.loadMode,
+        progressionDirection: exercise.progressionDirection,
         weight: isRepsOnlyExercise(exercise) ? undefined : 0,
         reps: 0,
       }
@@ -95,11 +95,6 @@ const formatDuration = (seconds?: number | null) =>
     : seconds >= 60
       ? `${Math.floor(seconds / 60)}m ${seconds % 60 || ""}`.trim()
       : `${seconds}s`;
-const groupBy = <T,>(items: T[], key: (item: T) => string) => {
-  const groups: Record<string, T[]> = {};
-  for (const item of items) (groups[key(item)] ??= []).push(item);
-  return Object.values(groups);
-};
 
 function Status({
   loading,
@@ -141,7 +136,7 @@ function PrBadges({ kinds }: { kinds: string[] }) {
 function SetText({ set, unit }: { set: StrengthSet; unit: string }) {
   return set.trackingType === "repetitions" ? (
     <>
-      {set.weight === undefined ? `${set.reps} reps` : `${displayWeight(set.weight,set.weightUnit??"lb",unit as WeightUnit)} ${unit} × ${set.reps}`}
+      {set.weight === undefined ? `${set.reps} reps` : `${displayWeight(set.weight,set.weightUnit??"lb",unit as WeightUnit)} ${unit}${set.progressionDirection === "lower_is_better" ? " assistance" : ""} × ${set.reps}`}
     </>
   ) : (
     <>
@@ -165,9 +160,11 @@ function ExercisePicker({
   onPick: (e: Exercise) => void;
   onCreate: (name: string) => void;
 }) {
-  const [q, setQ] = useState(value?.name ?? "");
+  const [q, setQ] = useState<string | null>(null);
+  const [pending, setPending] = useState<Exercise | null>(null);
+  const query = q ?? value?.name ?? "";
   const ref = useRef<HTMLInputElement>(null);
-  const matches = rankExercises(filterExercises(exercises, { query: q })).slice(
+  const matches = rankExercises(filterExercises(exercises, { query })).slice(
     0,
     8,
   );
@@ -178,21 +175,21 @@ function ExercisePicker({
         <input
           ref={ref}
           className="field-input"
-          value={q}
+          value={query}
           placeholder="Search exercises…"
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => value && setQ("")}
         />
       </label>
-      {q.trim() && q !== value?.name && (
+      {query.trim() && query !== value?.name && (
         <div className="picker-menu">
           {matches.map((e) => (
             <button
               key={e.id}
               className="picker-row"
               onClick={() => {
-                onPick(e);
-                setQ(e.name);
+                if (exerciseChangeWarning(value, e)) setPending(e);
+                else { onPick(e); setQ(null); }
               }}
             >
               <span className="min-w-0">
@@ -209,14 +206,15 @@ function ExercisePicker({
           ))}
           {!matches.length && (
             <p className="p-3 text-sm text-slate-500">
-              No active exercises match “{q.trim()}”.
+              No active exercises match “{query.trim()}”.
             </p>
           )}
-          <button className="picker-create" onClick={() => onCreate(q.trim())}>
-            + Create new exercise{q.trim() ? ` “${q.trim()}”` : ""}
+          <button className="picker-create" onClick={() => onCreate(query.trim())}>
+            + Create new exercise{query.trim() ? ` “${query.trim()}”` : ""}
           </button>
         </div>
       )}
+      <ConfirmDialog open={!!pending} title="Change exercise?" description={pending ? exerciseChangeWarning(value, pending) : ""} confirmLabel="Change Exercise" onCancel={() => { setPending(null); setQ(null); }} onConfirm={() => { if (pending) onPick(pending); setPending(null); setQ(null); }} />
     </div>
   );
 }
@@ -255,7 +253,7 @@ function SetRow({
         {set.trackingType === "repetitions" ? (
           <>
             {set.loadMode !== "reps_only" && <label className="field-label">
-              Weight ({unit})
+              {set.progressionDirection === "lower_is_better" ? "Assistance" : "Weight"} ({unit})
               <input
                 className="field-input"
                 inputMode="decimal"
@@ -340,6 +338,10 @@ function SetRow({
             </label>
           </>
         )}
+        {set.trackingType === "repetitions" && <>
+          {set.load !== undefined && <label className="field-label">Recorded load ({unit})<input className="field-input" type="number" min="0" step="any" value={set.load} onChange={event => number("load", event.target.value)} /></label>}
+          {set.durationSeconds !== undefined && <label className="field-label">Duration (seconds, optional)<input className="field-input" type="number" min="0" step="any" value={set.durationSeconds} onChange={event => number("durationSeconds", event.target.value)} /></label>}
+        </>}
         <label className="field-label col-span-2">
           Set notes (optional)
           <input
@@ -378,7 +380,7 @@ function WorkoutForm({
 }) {
   const addBlock = () =>
     setDraft(current=>({...current,exercises:[...current.exercises,{key:uid(),exercise:null,sets:[]}]}));
-  const updateBlock = (index:number,update:(block:WorkoutExercise)=>WorkoutExercise)=>setDraft(current=>({...current,exercises:current.exercises.map((block,i)=>i===index?update(block):block)}));
+  const updateBlock = (key:string,update:(block:WorkoutExercise)=>WorkoutExercise)=>setDraft(current=>({...current,exercises:current.exercises.map(block=>block.key===key?update(block):block)}));
   return (
     <section>
       <p className="eyebrow">STRENGTH</p>
@@ -443,7 +445,7 @@ function WorkoutForm({
         />
       </label>
       <div className="mt-6 space-y-4">
-        {draft.exercises.map((block, bi) => (
+        {draft.exercises.map((block) => (
           <div className="surface-card" key={block.key}>
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
@@ -452,11 +454,7 @@ function WorkoutForm({
                   value={block.exercise}
                   onCreate={onCreateExercise}
                   onPick={(exercise) =>
-                    updateBlock(bi, block=>({
-                      ...block,
-                      exercise,
-                      sets: [emptySet(exercise)],
-                    }))
+                    updateBlock(block.key, current => current.exercise ? changeExercise(current, exercise) : { ...current, exercise, sets: [emptySet(exercise)] })
                   }
                 />
               </div>
@@ -464,7 +462,7 @@ function WorkoutForm({
                 aria-label="Remove exercise"
                 className="icon-button mt-5 text-rose-300"
                 onClick={() =>
-                  setDraft(current=>({...current,exercises:current.exercises.filter((_,i)=>i!==bi)}))
+                  setDraft(current=>({...current,exercises:current.exercises.filter(item=>item.key!==block.key)}))
                 }
               >
                 ×
@@ -479,33 +477,28 @@ function WorkoutForm({
                     index={si}
                     unit={set.weightUnit??(draft.id?"lb":unit)}
                     onChange={(update) =>
-                      updateBlock(bi, block=>({
+                      updateBlock(block.key, block=>({
                         ...block,
-                        sets: block.sets.map((s, i) => (i === si ? update(s) : s)),
+                        sets: block.sets.map(s => ((s.id ?? s.clientKey) === (set.id ?? set.clientKey) ? update(s) : s)),
                       }))
                     }
                     onRemove={() =>
-                      updateBlock(bi, block=>({
+                      updateBlock(block.key, block=>({
                         ...block,
-                        sets: block.sets.filter((_, i) => i !== si),
+                        sets: block.sets.filter(s => (s.id ?? s.clientKey) !== (set.id ?? set.clientKey)),
                       }))
                     }
                     onDuplicate={() =>
-                      updateBlock(bi, block=>({
-                        ...block,
-                        sets: [
-                          ...block.sets.slice(0, si + 1),
-                          { ...set, id: undefined,clientKey:uid() },
-                          ...block.sets.slice(si + 1),
-                        ],
-                      }))
+                      updateBlock(block.key, current => ({ ...current, sets: current.sets.flatMap(row =>
+                        (row.id ?? row.clientKey) === (set.id ?? set.clientKey)
+                          ? [row, { ...row, id: undefined, clientKey: uid() }] : [row]) }))
                     }
                   />
                 ))}
                 <button
                   className="secondary-button w-full"
                   onClick={() =>
-                    updateBlock(bi, block=>({
+                    updateBlock(block.key, block=>({
                       ...block,
                       sets: [
                         ...block.sets,
@@ -732,6 +725,7 @@ function ExerciseEditor({
       name: exercise?.name ?? initialName,
       trackingType: exercise?.trackingType ?? "repetitions",
       loadMode: exercise?.loadMode ?? "weight_reps",
+      progressionDirection: exercise?.progressionDirection ?? "higher_is_better",
       majorMuscleGroups: exercise?.majorMuscleGroups ?? ["Legs"],
       muscleTags: exercise?.muscleTags ?? [],
       isCompound: exercise?.isCompound ?? false,
@@ -811,9 +805,11 @@ function ExerciseEditor({
                 ...input,
                 trackingType: mode === "distance" ? "distance" : "repetitions",
                 loadMode: mode === "reps_only" ? "reps_only" : "weight_reps",
+                progressionDirection: mode === "weight_reps" ? input.progressionDirection : "higher_is_better",
               })
             }
           />
+          {input.trackingType==='repetitions'&&input.loadMode==='weight_reps'&&<Select label="Progression" value={input.progressionDirection??'higher_is_better'} options={[{value:'higher_is_better',label:'More weight is progress'},{value:'lower_is_better',label:'Less assistance is progress'}]} onChange={value=>setInput({...input,progressionDirection:value as ExerciseInput['progressionDirection']})}/>}
           <fieldset>
             <legend className="field-label">Major muscle groups</legend>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -934,7 +930,7 @@ function HistoryList({
             result =
               group.sets.length === 1
                 ? group.sets[0].trackingType === "repetitions"
-                  ? group.sets[0].weight===undefined?`${group.sets[0].reps} reps`:`${displayWeight(group.sets[0].weight,group.sets[0].weightUnit??"lb",unit as WeightUnit)} ${unit} x ${group.sets[0].reps}`
+                  ? group.sets[0].weight===undefined?`${group.sets[0].reps} reps`:`${displayWeight(group.sets[0].weight,group.sets[0].weightUnit??"lb",unit as WeightUnit)} ${unit}${group.sets[0].exercise.progressionDirection === "lower_is_better" ? " assistance" : ""} × ${group.sets[0].reps}`
                   : `${group.sets[0].distance} ${group.sets[0].distanceUnit}`
                 : `${group.sets.length} sets`,
             displayDate = new Date(`${group.date}T12:00:00`).toLocaleDateString(
@@ -1156,26 +1152,7 @@ export function StrengthFeature({
       });
   }, [create, locations,weightUnit]);
   const edit = (w: Workout) => {
-    if (isQuickWorkout(w)) {
-      setQuickDraft(quickLiftFromWorkout(w));
-      setQuickErrors({});
-      setView("quick");
-      return;
-    }
-    const grouped = groupBy(w.sets, (s) => s.exerciseId);
-    setDraft({
-      id: w.id,
-      originalPerformedAt:w.performedAt,
-      date: localDateKey(w.performedAt),
-      locationId: w.location?.id ?? null,
-      notes: w.notes ?? "",
-      durationSeconds: w.durationSeconds ?? undefined,
-      exercises: grouped.map((sets) => ({
-        key: uid(),
-        exercise: sets[0].exercise,
-        sets,
-      })),
-    });
+    setDraft(workoutEditDraft(w));
     setView("form");
   };
   const submitQuick = async () => {

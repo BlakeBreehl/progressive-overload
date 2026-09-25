@@ -1,4 +1,4 @@
-const CACHE = 'progressive-overload-shell-v6'
+const CACHE = 'progressive-overload-shell-v7'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/brand-icon.svg', '/favicon.svg', '/icons/favicon-32.png', '/icons/favicon-48.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png', '/icons/apple-touch-icon.png']
 
 self.addEventListener('install', (event) => {

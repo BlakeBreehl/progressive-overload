@@ -1,12 +1,16 @@
+import {startupTrace} from './startupDiagnostic';
+import {safeSupabaseDiagnostic} from './supabaseError';
 import type { SupabaseClient } from '@supabase/supabase-js';
-export const releaseId='progressive-overload-2.0-launch';
+export const releaseId='progressive-overload-2.1-launch';
 const eventName='release-dismissed';
 const key=(userId:string)=>releaseId+':'+userId;
 // Storage is a cross-tab notification, never authority for the initial decision.
 export async function shouldAnnounce(client:SupabaseClient,userId:string,ready:boolean){
   if(!ready||!userId)return false;
+  startupTrace('Announcements','lookup acknowledgement');
   const {data,error}=await client.rpc('get_release_acknowledgement',{p_release_id:releaseId});
-  if(error||typeof data!=='boolean')throw new Error('Could not check the release announcement. Please retry.');
+  if(error||typeof data!=='boolean'){safeSupabaseDiagnostic('Announcements','lookup acknowledgement',error);throw new Error('Could not check the release announcement. Please retry.');}
+  startupTrace('Announcements','lookup acknowledgement','ready');
   return !data;
 }
 export async function acknowledgeRelease(client:SupabaseClient,userId:string){

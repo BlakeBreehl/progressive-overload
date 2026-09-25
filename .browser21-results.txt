@@ -1,0 +1,17 @@
+{"mode":"android-browser","width":320,"height":568,"checks":40,"failures":[]}
+{"mode":"android-browser","width":375,"height":812,"checks":40,"failures":[]}
+{"mode":"android-browser","width":390,"height":844,"checks":40,"failures":[]}
+{"mode":"android-browser","width":430,"height":932,"checks":40,"failures":[]}
+{"mode":"android-standalone","width":320,"height":568,"checks":40,"failures":[]}
+{"mode":"android-standalone","width":375,"height":812,"checks":40,"failures":[]}
+{"mode":"android-standalone","width":390,"height":844,"checks":40,"failures":[]}
+{"mode":"android-standalone","width":430,"height":932,"checks":40,"failures":[]}
+{"mode":"ios-browser-emulated","width":320,"height":568,"checks":40,"failures":[]}
+{"mode":"ios-browser-emulated","width":375,"height":812,"checks":40,"failures":[]}
+{"mode":"ios-browser-emulated","width":390,"height":844,"checks":40,"failures":[]}
+{"mode":"ios-browser-emulated","width":430,"height":932,"checks":40,"failures":[]}
+{"mode":"ios-standalone-emulated","width":320,"height":568,"checks":40,"failures":[]}
+{"mode":"ios-standalone-emulated","width":375,"height":812,"checks":40,"failures":[]}
+{"mode":"ios-standalone-emulated","width":390,"height":844,"checks":40,"failures":[]}
+{"mode":"ios-standalone-emulated","width":430,"height":932,"checks":40,"failures":[]}
+Browser results: C:\Users\blake\AppData\Local\Temp\po-release-WMG4LL\results.json

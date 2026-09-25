@@ -1,10 +1,11 @@
+import { cardioEditDraft, cardioEntryPayload, type Form } from './entryDraft';
 import { LocationSelect } from "../../components/LocationSelect";
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   cardioFields,
-  durationParts,
+  parseStepCount,
   durationToSeconds,
   formatDuration,
   validateCardio,
@@ -22,31 +23,17 @@ import {
   type CardioSession,
 } from "./repository";
 import type { Location } from "../strength/types";
-import { localDateKey, localDateToIso } from "../strength/logic";
+import { localDateKey } from "../strength/logic";
 import { getLocations } from "../strength/repository";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Combobox, Select } from "../../components/SelectionControls";
 import { Pagination } from "../../components/Pagination";
 import { EntrySuccessActions } from "../../components/EntrySuccessActions";
 import { validHistoryPage } from "../../lib/pagedHistory";
-type Form = {
-  id?: string;
-  activityId: string;
-  date: string;
-  h: number;
-  m: number;
-  s: number;
-  distance?: number;
-  distanceUnit: string;
-  speed?: number;
-  incline?: number;
-  difficulty?: number;
-  locationId: string;
-  notes: string;
-};
 const today = () => localDateKey(new Date().toISOString()),
   blank = (locations: Location[]): Form => ({
     activityId: "",
+    steps: "",
     date: today(),
     h: 0,
     m: 0,
@@ -81,6 +68,7 @@ export function CardioFeature({
     [historySearch, setHistorySearch] = useState(""),
     [historyLocation, setHistoryLocation] = useState("all"),
     [historyPage, setHistoryPage] = useState(1);
+  const [historyRevision,setHistoryRevision]=useState(0);
   const [historyTotal,setHistoryTotal]=useState(0),[historyLoading,setHistoryLoading]=useState(false),[debouncedSearch,setDebouncedSearch]=useState("");
   useEffect(()=>{const timer=setTimeout(()=>setDebouncedSearch(historySearch),250);return()=>clearTimeout(timer)},[historySearch]);
   const load = useCallback(async () => {
@@ -91,7 +79,7 @@ export function CardioFeature({
         getLocations(client, userId).catch(() => []),
       ]);
       setActivities(data.activities);
-      setEntries(data.sessions);
+      setHistoryRevision(value=>value+1);
       setLocations(locationResult);
       setError(data.warning);
     } catch (e) {
@@ -107,24 +95,9 @@ export function CardioFeature({
     if (create)
       queueMicrotask(() => setForm((current) => current ?? blank(locations)));
   }, [create, locations]);
-  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getCardioHistoryPage(client,userId,{page:historyPage,search:debouncedSearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none"}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setEntries(result.items)}).catch(()=>{if(active)setError("Cardio history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedSearch,historyLocation,loading]);
+  useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getCardioHistoryPage(client,userId,{page:historyPage,search:debouncedSearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none"}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setEntries(result.items)}).catch(()=>{if(active)setError("Cardio history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedSearch,historyLocation,loading,historyRevision]);
   const edit = (entry: CardioSession) => {
-    const p = durationParts(entry.durationSeconds);
-    setForm({
-      id: entry.id,
-      activityId: entry.activityId,
-      date: localDateKey(entry.performedAt),
-      h: p.hours,
-      m: p.minutes,
-      s: p.seconds,
-      distance: entry.distance,
-      distanceUnit: entry.distanceUnit ?? "miles",
-      speed: entry.speed,
-      incline: entry.incline,
-      difficulty: entry.difficulty,
-      locationId: entry.locationId ?? "",
-      notes: entry.notes ?? "",
-    });
+    setForm(cardioEditDraft(entry));
   };
   const save = async () => {
     if (!form || saving) return;
@@ -139,31 +112,19 @@ export function CardioFeature({
         incline: form.incline,
         difficulty: form.difficulty,
       });
+    if (form.laps !== undefined && (!Number.isFinite(form.laps) || form.laps < 0)) errors.push("Laps cannot be negative.");
     if (errors.length) {
       setError(errors.join(" "));
       return;
     }
+    try {parseStepCount(form.steps);} catch(error) {setError((error as Error).message);return;}
     setSaving(true);
     try {
-      const fields = cardioFields(activity!.name);
-      const saved={...form},id=await saveCardioSession(
+      const payload = cardioEntryPayload(form);
+      const saved={...form,originalPerformedAt:payload.performed_at},id=await saveCardioSession(
         client,
         userId,
-        {
-          activity_id: form.activityId,
-          performed_at: localDateToIso(form.date),
-          duration_seconds: durationToSeconds(form.h, form.m, form.s),
-          distance: fields.distance ? (form.distance ?? null) : null,
-          distance_unit:
-            fields.distance && form.distance !== undefined
-              ? form.distanceUnit
-              : null,
-          speed: fields.speed ? (form.speed ?? null) : null,
-          incline: fields.incline ? (form.incline ?? null) : null,
-          difficulty: fields.difficulty ? (form.difficulty ?? null) : null,
-          location_id: form.locationId || null,
-          notes: form.notes || null,
-        },
+        payload,
         form.id,
       );
       setSuccess({id,form:saved});setForm(null);
@@ -182,7 +143,7 @@ export function CardioFeature({
   const selected = activities.find((a) => a.id === form?.activityId),
     fields = cardioFields(selected?.name ?? ""),
     historyResults = {items:entries,total:historyTotal,page:historyPage,pages:Math.max(1,Math.ceil(historyTotal/20)),start:historyTotal?(historyPage-1)*20+1:0,end:Math.min(historyPage*20,historyTotal)};
-  if(success&&!form){const activity=activities.find(item=>item.id===success.form.activityId);return <section className="mx-auto max-w-xl"><p className="eyebrow">CARDIO SAVED</p><h1 className="page-title">Entry saved.</h1><div className="surface-card mt-6"><strong>{activity?.name??"Cardio"}</strong><p className="mt-2 text-sm text-slate-600">{formatDuration(durationToSeconds(success.form.h,success.form.m,success.form.s))}</p></div><EntrySuccessActions onAnother={()=>{setSuccess(null);setForm(blank(locations))}} onEdit={()=>{setForm({...success.form,id:success.id})}} onDone={()=>setSuccess(null)}/></section>}
+  if(success&&!form){const activity=activities.find(item=>item.id===success.form.activityId);return <section className="mx-auto max-w-xl"><p className="eyebrow">CARDIO SAVED</p><h1 className="page-title">Entry saved.</h1><div className="surface-card mt-6"><strong>{activity?.name??"Cardio"}</strong><p className="mt-2 text-sm text-slate-600">{formatDuration(durationToSeconds(success.form.h,success.form.m,success.form.s))}</p>{success.form.steps!==""&&<p className="mt-2 text-sm">{Number(success.form.steps).toLocaleString()} steps</p>}</div><EntrySuccessActions onAnother={()=>{setSuccess(null);setForm(blank(locations))}} onEdit={()=>{setForm({...success.form,id:success.id})}} onDone={()=>setSuccess(null)}/></section>}
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -262,7 +223,8 @@ export function CardioFeature({
               ]}
               onChange={(locationId) => setForm(current=>current?{ ...current, locationId }:current)}
             />
-            {fields.distance && (
+            <label className="field-label">Steps<input className="field-input" type="text" inputMode="numeric" value={form.steps} aria-describedby="steps-help" onChange={event=>{const steps=event.target.value;setForm(current=>current?{...current,steps}:current)}}/><span id="steps-help" className="text-xs text-slate-500">Optional manual step count</span></label>
+            {(fields.distance || form.distance !== undefined) && (
               <>
                 <label className="field-label">
                   Distance
@@ -293,7 +255,7 @@ export function CardioFeature({
                 />
               </>
             )}
-            {fields.speed && (
+            {(fields.speed || form.speed !== undefined) && (
               <label className="field-label">
                 Speed
                 <input
@@ -314,7 +276,7 @@ export function CardioFeature({
                 />
               </label>
             )}
-            {fields.incline && (
+            {(fields.incline || form.incline !== undefined) && (
               <label className="field-label">
                 Incline
                 <input
@@ -335,7 +297,7 @@ export function CardioFeature({
                 />
               </label>
             )}
-            {fields.difficulty && (
+            {(fields.difficulty || form.difficulty !== undefined) && (
               <label className="field-label">
                 Difficulty / level (0–10)
                 <input
@@ -357,6 +319,7 @@ export function CardioFeature({
                 />
               </label>
             )}
+            {form.laps !== undefined && <label className="field-label">Recorded laps<input className="field-input" type="number" min="0" step="any" value={form.laps} onChange={event=>{const laps=event.target.value === "" ? undefined : Number(event.target.value);setForm(current=>current?{...current,laps}:current)}} /></label>}
             <label className="field-label md:col-span-2">
               Notes (optional)
               <textarea
@@ -418,6 +381,7 @@ export function CardioFeature({
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
+                  {entry.stepCount !== undefined && `${entry.stepCount.toLocaleString()} steps · `}
                   {entry.distance !== undefined &&
                     `${entry.distance} ${entry.distanceUnit} `}
                   {entry.speed !== undefined && `· Speed ${entry.speed} `}

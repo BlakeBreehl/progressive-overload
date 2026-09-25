@@ -1,7 +1,11 @@
+import {startupTrace} from '../../lib/startupDiagnostic';
+import {safeSupabaseDiagnostic} from '../../lib/supabaseError';
 import type {SupabaseClient} from '@supabase/supabase-js';
 export const privacyEvent='group-progress-privacy-changed';
 export async function getProgressSharing(client:SupabaseClient){
- const {data,error}=await client.rpc('get_group_progress_sharing');if(error)throw error;
+ startupTrace('Groups','read optional progress privacy');
+ const {data,error}=await client.rpc('get_group_progress_sharing');if(error){safeSupabaseDiagnostic('Groups','read optional progress privacy',error);throw error;}
+ startupTrace('Groups','read optional progress privacy','ready');
  if(typeof data!=='boolean')throw new Error('Privacy preference unavailable');return data;
 }
 export function publishPrivacyChange(userId:string){

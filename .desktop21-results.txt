@@ -1,0 +1,3 @@
+{"mode":"chromium","width":768,"height":1024,"checks":40,"failures":[]}
+{"mode":"chromium","width":1280,"height":900,"checks":40,"failures":[]}
+Browser results: C:\Users\blake\AppData\Local\Temp\po-release-ZwPO0S\results.json

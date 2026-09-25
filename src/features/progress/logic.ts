@@ -1,6 +1,6 @@
 import {convertDistance, distanceMiles} from "../../lib/distanceUnits";
-export type StrengthPoint={date:string;weight:number;comparisonWeight?:number;reps:number;location?:string|null}
-export const bestSet=(sets:StrengthPoint[])=>sets.reduce<StrengthPoint|undefined>((best,set)=>!best||(set.comparisonWeight??set.weight)>(best.comparisonWeight??best.weight)||(set.comparisonWeight??set.weight)===(best.comparisonWeight??best.weight)&&set.reps>best.reps?set:best,undefined)
+export type StrengthPoint={date:string;weight:number;comparisonWeight?:number;progressionDirection?:string;reps:number;location?:string|null}
+export const bestSet=(sets:StrengthPoint[])=>sets.reduce<StrengthPoint|undefined>((best,set)=>!best||(set.progressionDirection==='lower_is_better'?(set.comparisonWeight??set.weight)<(best.comparisonWeight??best.weight):(set.comparisonWeight??set.weight)>(best.comparisonWeight??best.weight))||(set.comparisonWeight??set.weight)===(best.comparisonWeight??best.weight)&&set.reps>best.reps?set:best,undefined)
 export const normalizeDistance=convertDistance;
 export function runningMetrics(distance:number|undefined,unit:string|undefined,durationSeconds:number|undefined){if(!distance||!durationSeconds||durationSeconds<=0)return null;const miles=distanceMiles(distance,unit);if(miles===null)return null;return{distanceMiles:miles,speedMph:miles/(durationSeconds/3600),paceSecondsPerMile:durationSeconds/miles}}
 export type CardioAggregateInput={date:string;duration:number;distance?:number}

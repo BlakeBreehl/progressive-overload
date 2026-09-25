@@ -1,9 +1,12 @@
 import type { LoadMode, MuscleGroup, TrackingType } from './types'
 import { normalizeExerciseName } from './logic'
-export type StarterExercise={name:string;groups:MuscleGroup[];tags:string[];compound:boolean;tracking:TrackingType;loadMode?:LoadMode}
+export type StarterExercise={name:string;groups:MuscleGroup[];tags:string[];compound:boolean;tracking:TrackingType;loadMode?:LoadMode;progressionDirection?:'higher_is_better'|'lower_is_better'}
 const rep=(names:string[],groups:MuscleGroup[],tags:string[]=[],compound=false):StarterExercise[]=>names.map(name=>({name,groups,tags,compound,tracking:'repetitions'}))
 export const starterExercises:StarterExercise[]=[
-  ...rep(['Bench Press','Chest Press','Machine Chest Press','Lying Chest Press','Cable Fly','Chest Fly','Dumbbell Bench Press','Dumbbell Chest Fly','Push Up','Dip','Weighted Dip'],['Chest'],['Mid Chest','Triceps'],true),
+  ...rep(['Dip','Weighted Dip'],['Arms'],['Triceps'],true),
+  ...rep(['Assisted Dip'],['Arms'],['Triceps'],true).map(exercise=>({...exercise,loadMode:'weight_reps' as const,progressionDirection:'lower_is_better' as const})),
+  ...rep(['Assisted Pull Up','Assisted Chin Up'],['Back'],['Lats','Biceps'],true).map(exercise=>({...exercise,loadMode:'weight_reps' as const,progressionDirection:'lower_is_better' as const})),
+  ...rep(['Bench Press','Chest Press','Machine Chest Press','Lying Chest Press','Cable Fly','Chest Fly','Dumbbell Bench Press','Dumbbell Chest Fly','Push Up'],['Chest'],['Mid Chest','Triceps'],true),
   ...rep(['Incline Bench Press','Incline Chest Press','Dumbbell Incline Bench'],['Chest'],['Upper Chest']),
   ...rep(['Decline Chest Press','Decline Bench Press'],['Chest'],['Lower Chest']),
   ...rep(['Shoulder Press','Machine Shoulder Press','Military Press','Dumbbell Shoulder Press'],['Shoulders'],['Front Delts'],true),
@@ -36,5 +39,7 @@ for (const exercise of starterExercises) if (['Pull Up','Chin Up','Dip','Push Up
 export function planStarterSeed(existingNames:string[],installationComplete:boolean){
   if(installationComplete)return []
   const existing=new Set(existingNames.map(normalizeExerciseName))
-  return starterExercises.filter(exercise=>!existing.has(normalizeExerciseName(exercise.name)))
+  const assistedKey=(name:string)=>name.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/s$/,'');
+  const equivalents=new Set(existingNames.map(assistedKey));
+  return starterExercises.filter(exercise=>!existing.has(normalizeExerciseName(exercise.name))&&!(exercise.progressionDirection==='lower_is_better'&&equivalents.has(assistedKey(exercise.name))))
 }

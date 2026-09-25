@@ -1,3 +1,5 @@
+import {startupTrace} from './startupDiagnostic';
+import {startupDeadline} from './startupDeadline';
 import { safeSupabaseDiagnostic, transientDataError } from './supabaseError';
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { defaultModules, toSettingsRow, type ModuleState } from '../domain/modules'
@@ -5,12 +7,15 @@ import { defaultModules, toSettingsRow, type ModuleState } from '../domain/modul
 export type UserSetup = { modules: ModuleState; onboardingCompleted: boolean; preferredWeightUnit: 'lb'|'kg' }
 
 export async function loadUserSetup(client: SupabaseClient, userId: string): Promise<UserSetup> {
-  const [settingsResult, profileResult] = await Promise.all([
-    client.from('user_settings').select('strength_enabled,cardio_enabled,mobility_enabled,weight_enabled,preferred_weight_unit').eq('user_id', userId).single(),
-    client.from('profiles').select('onboarding_completed').eq('user_id', userId).single(),
-  ])
+  startupTrace('Account','read profile, modules and settings');
+  const [settingsResult, profileResult] = await startupDeadline(Promise.all([
+    client.from('user_settings').select('strength_enabled,cardio_enabled,mobility_enabled,weight_enabled,preferred_weight_unit').eq('user_id', userId).maybeSingle(),
+    client.from('profiles').select('onboarding_completed').eq('user_id', userId).maybeSingle(),
+  ]))
   if (settingsResult.error) { const error={...settingsResult.error,status:settingsResult.status,operation:'load user_settings'};safeSupabaseDiagnostic("Startup",error.operation,error);throw error }
   if (profileResult.error) { const error={...profileResult.error,status:profileResult.status,operation:'load profiles'};safeSupabaseDiagnostic("Startup",error.operation,error);throw error }
+  if(!settingsResult.data||!profileResult.data){const error={code:'ACCOUNT_ROWS_PENDING',status:200};safeSupabaseDiagnostic('Startup','companion rows absent',error);throw error;}
+  startupTrace('Account','read profile, modules and settings','ready');
   return {
     modules: {
       strength: settingsResult.data.strength_enabled,
@@ -24,9 +29,9 @@ export async function loadUserSetup(client: SupabaseClient, userId: string): Pro
 }
 
 const delay=(milliseconds:number)=>new Promise(resolve=>setTimeout(resolve,milliseconds))
-export const transientSetupError=(error:unknown)=>transientDataError(error)||(error as {code?:string})?.code==='PGRST116';
+export const transientSetupError=(error:unknown)=>transientDataError(error)||(error as {code?:string})?.code==='ACCOUNT_ROWS_PENDING';
 
-/** New auth sessions can arrive a few milliseconds before companion-row triggers are visible. */
+/** Bound retries for absent-row responses and transient transport failures; never infer their production cause. */
 async function fetchUserSetupWithRetry(client:SupabaseClient,userId:string,{attempts=4,wait=delay}:{attempts?:number;wait?:(milliseconds:number)=>Promise<unknown>}={}):Promise<UserSetup>{
  let last:unknown
  for(let attempt=0;attempt<attempts;attempt++){

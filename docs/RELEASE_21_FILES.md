@@ -1,0 +1,122 @@
+# Progressive Overload 2.1 exact worktree inventory
+
+This lists the entire final uncommitted worktree relative to HEAD, including correct incoming work preserved from the prior run. No commits, pushes, resets or deletions were performed. Result logs are local artifacts, not deployment files.
+
+## Source, migration, test and review files edited/added during this continuation
+
+- `docs/RELEASE_21_FILES.md`
+- `docs/RELEASE_21_PREFLIGHT.sql`
+- `docs/RELEASE_21_PRESERVATION.sql`
+- `docs/RELEASE_21_RESULTS.md`
+- `docs/RELEASE_21_REVIEW.md`
+- `docs/RELEASE_21_VERIFY.sql`
+- `src/components/ReleaseAnnouncement.tsx`
+- `src/features/cardio/StepsProgress.tsx`
+- `src/features/cardio/steps.test.ts`
+- `src/features/cardio/steps.ts`
+- `src/features/progress/ProgressFeature.tsx`
+- `src/features/progress/repository.test.ts`
+- `src/features/progress/repository.ts`
+- `src/features/progress/strengthModes.test.ts`
+- `src/features/progress/strengthModes.ts`
+- `src/features/repositoryRelationships.test.ts`
+- `src/features/strength/assisted.test.ts`
+- `src/features/strength/logic.ts`
+- `src/features/strength/release21Migration.test.ts`
+- `src/features/strength/setTrend.ts`
+- `src/features/strength/starterLibrary.test.ts`
+- `src/features/strength/starterLibrary.ts`
+- `src/lib/accountBootstrap.test.ts`
+- `src/lib/settings.ts`
+- `src/lib/startupAuth.test.ts`
+- `src/lib/startupAuth.ts`
+- `src/lib/startupDeadline.test.ts`
+- `src/lib/startupDeadline.ts`
+- `supabase/migrations/202609220011_cardio_steps_and_assisted_progression.sql`
+- `tests/browser/leaderboards21.jsx`
+- `tests/browser/release21.jsx`
+- `tests/browser/runFocusedRelease.mjs`
+- `tests/browser/serveFocusedRelease.mjs`
+
+## All modified tracked files (including preserved prior work)
+
+- `public/sw.js`
+- `src/components/ReleaseAnnouncement.tsx`
+- `src/components/TimeXAxis.test.ts`
+- `src/domain/launchContract.test.ts`
+- `src/features/cardio/CardioFeature.tsx`
+- `src/features/cardio/logic.ts`
+- `src/features/cardio/repository.ts`
+- `src/features/groups/GroupsFeature.tsx`
+- `src/features/groups/logic.test.ts`
+- `src/features/groups/logic.ts`
+- `src/features/groups/privacy.ts`
+- `src/features/progress/ProgressFeature.tsx`
+- `src/features/progress/logic.ts`
+- `src/features/progress/repository.ts`
+- `src/features/progress/strengthModes.test.ts`
+- `src/features/progress/strengthModes.ts`
+- `src/features/repositoryRelationships.test.ts`
+- `src/features/strength/QuickLiftForm.tsx`
+- `src/features/strength/SetsByMuscleGroup.tsx`
+- `src/features/strength/StrengthFeature.tsx`
+- `src/features/strength/WorkoutCard.tsx`
+- `src/features/strength/logic.ts`
+- `src/features/strength/repository.ts`
+- `src/features/strength/searchMetadata.ts`
+- `src/features/strength/setTrend.test.ts`
+- `src/features/strength/setTrend.ts`
+- `src/features/strength/starterLibrary.test.ts`
+- `src/features/strength/starterLibrary.ts`
+- `src/features/strength/types.ts`
+- `src/features/weight/WeeklyChangeTable.test.tsx`
+- `src/lib/accountBootstrap.test.ts`
+- `src/lib/metricTicks.ts`
+- `src/lib/releaseAnnouncement.test.ts`
+- `src/lib/releaseAnnouncement.ts`
+- `src/lib/retryableLazy.tsx`
+- `src/lib/serviceWorker.test.ts`
+- `src/lib/settings.ts`
+- `src/lib/settingsRetry.test.ts`
+- `src/lib/startupAuth.test.ts`
+- `src/lib/startupAuth.ts`
+- `src/lib/supabaseError.ts`
+- `src/lib/timeAxis.ts`
+- `src/main.tsx`
+- `tests/browser/mobileRepair.jsx`
+- `tests/browser/runFocusedRelease.mjs`
+- `tests/browser/serveFocusedRelease.mjs`
+
+## All untracked added files / result artifacts
+
+- `.announcement21-results.txt`
+- `.audit-results.json`
+- `.browser21-results.txt`
+- `.build-results.txt`
+- `.desktop21-results.txt`
+- `.focused21-results.txt`
+- `.leaderboards21-desktop-results.txt`
+- `.leaderboards21-results.txt`
+- `.lint-results.txt`
+- `.mobile21-results.txt`
+- `.security21-results.json`
+- `.test-results.txt`
+- `.typecheck-results.txt`
+- `docs/RELEASE_21_FILES.md`
+- `docs/RELEASE_21_PREFLIGHT.sql`
+- `docs/RELEASE_21_PRESERVATION.sql`
+- `docs/RELEASE_21_RESULTS.md`
+- `docs/RELEASE_21_REVIEW.md`
+- `docs/RELEASE_21_VERIFY.sql`
+- `src/features/cardio/StepsProgress.tsx`
+- `src/features/cardio/steps.test.ts`
+- `src/features/cardio/steps.ts`
+- `src/features/progress/repository.test.ts`
+- `src/features/strength/assisted.test.ts`
+- `src/features/strength/release21Migration.test.ts`
+- `src/lib/startupDeadline.test.ts`
+- `src/lib/startupDeadline.ts`
+- `src/lib/startupDiagnostic.ts`
+- `supabase/migrations/202609220011_cardio_steps_and_assisted_progression.sql`
+- `tests/browser/leaderboards21.jsx`
+- `tests/browser/release21.jsx`

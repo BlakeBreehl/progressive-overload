@@ -1,5 +1,7 @@
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { exerciseChangeWarning } from './exerciseChange';
 import { LocationSelect } from "../../components/LocationSelect";
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { filterExercises, isRepsOnlyExercise, rankExercises } from "./logic";
 import type { Exercise, Location } from "./types";
 import { newQuickLiftSet, type QuickLiftDraft, type QuickLiftErrors } from "./quickLog";
@@ -28,13 +30,14 @@ export function QuickLiftForm({
   onCancel: () => void;
   onCreateExercise: (name: string) => void;
 }) {
+  const [pending, setPending] = useState<Exercise | null>(null);
+  const applyExercise = (exercise: Exercise) => {
+    onChange(current => ({ ...current, exercise, sets: current.sets.map(set => ({ ...set, weight: exercise.trackingType === "distance" || exercise.loadMode === "reps_only" ? "" : set.weight, reps: exercise.trackingType === "distance" ? "" : set.reps })), weight: exercise.trackingType === "distance" || exercise.loadMode === "reps_only" ? "" : current.weight, reps: exercise.trackingType === "distance" ? "" : current.reps, distance: exercise.trackingType === "distance" ? current.distance : "", laps: exercise.trackingType === "distance" ? current.laps : "" }));
+    setQ(exercise.name); setOpen(false);
+  };
   const [q, setQ] = useState(draft.exercise?.name ?? ""),
     [open, setOpen] = useState(true),
-    matches = useMemo(
-      () =>
-        rankExercises(filterExercises(exercises, { query: q })).slice(0, 10),
-      [exercises, q],
-    ),
+    matches = rankExercises(filterExercises(exercises, { query: q })).slice(0, 10),
     setValue = (setKey: string|undefined, key: "weight" | "reps", value: string) =>
       onChange(current => ({...current,sets:current.sets.map(set=>set.key===setKey?{...set,[key]:value}:set)}));
   return (
@@ -54,8 +57,6 @@ export function QuickLiftForm({
               onChange={(e) => {
                 setQ(e.target.value);
                 setOpen(true);
-                if (draft.exercise && e.target.value !== draft.exercise.name)
-                  onChange(current => ({ ...current, exercise: null }));
               }}
             />
           </label>
@@ -70,17 +71,8 @@ export function QuickLiftForm({
                   className="picker-row"
                   key={exercise.id}
                   onClick={() => {
-                    onChange(current => ({
-                      ...current,
-                      exercise,
-                      sets: [newQuickLiftSet()],
-                      load: "",
-                      distance: "",
-                      laps: "1",
-                      durationSeconds: "",
-                    }));
-                    setQ(exercise.name);
-                    setOpen(false);
+                    if (exerciseChangeWarning(draft.exercise, exercise)) setPending(exercise);
+                    else applyExercise(exercise);
                   }}
                 >
                   <span>
@@ -130,7 +122,7 @@ export function QuickLiftForm({
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   {!isRepsOnlyExercise(draft.exercise!) && <label className="field-label">
-                    Weight ({unit})
+                    {draft.exercise?.progressionDirection === "lower_is_better" ? "Assistance" : "Weight"} ({unit})
                     <input
                       className="field-input"
                       inputMode="decimal"
@@ -210,6 +202,7 @@ export function QuickLiftForm({
           </button>
         </div>
       </div>
+      <ConfirmDialog open={!!pending} title="Change exercise?" description={pending ? exerciseChangeWarning(draft.exercise, pending) : ""} confirmLabel="Change Exercise" onCancel={() => { setPending(null); setQ(draft.exercise?.name ?? ""); setOpen(false); }} onConfirm={() => { if (pending) applyExercise(pending); setPending(null); }} />
     </section>
   );
 }

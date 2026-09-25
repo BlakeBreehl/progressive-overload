@@ -3,7 +3,7 @@ import {runInNewContext} from 'node:vm';
 import source from '../../public/sw.js?raw';
 function fixture(){
  const events:Record<string,(event:any)=>void>={},put=vi.fn(),remove=vi.fn(),match=vi.fn(),fetch=vi.fn();
- runInNewContext(source,{URL,fetch,self:{location:{origin:'https://local.test'},addEventListener:(name:string,callback:typeof events[string])=>events[name]=callback,skipWaiting:vi.fn(),clients:{claim:vi.fn()}},caches:{open:async()=>({put,addAll:vi.fn()}),keys:async()=>['unrelated-cache','progressive-overload-shell-v5','progressive-overload-shell-v6'],delete:remove,match}});
+ runInNewContext(source,{URL,fetch,self:{location:{origin:'https://local.test'},addEventListener:(name:string,callback:typeof events[string])=>events[name]=callback,skipWaiting:vi.fn(),clients:{claim:vi.fn()}},caches:{open:async()=>({put,addAll:vi.fn()}),keys:async()=>['unrelated-cache','progressive-overload-shell-v5','progressive-overload-shell-v7'],delete:remove,match}});
  return {events,put,remove,match,fetch};
 }
 it('never intercepts auth/API/Supabase or non-GET traffic',()=>{const f=fixture();for(const path of ['/auth/token','/rest/v1/profiles','/api/profile','/functions/v1/test','/storage/v1/test','https://fixture.supabase.co/rest/v1/test','/?access_token=fixture']){const respondWith=vi.fn();f.events.fetch({request:{url:path.startsWith('https:')?path:'https://local.test'+path,method:'GET',mode:'navigate'},respondWith});expect(respondWith).not.toHaveBeenCalled();}const respondWith=vi.fn();f.events.fetch({request:{url:'https://local.test/',method:'POST',mode:'navigate'},respondWith});expect(respondWith).not.toHaveBeenCalled();});

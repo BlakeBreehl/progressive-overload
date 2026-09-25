@@ -1,0 +1,5 @@
+
+{"mode":"chromium","width":768,"height":1024,"checks":16,"failures":[]}
+Browser results: C:\Users\blake\AppData\Local\Temp\po-release-Wmzaoz\results.json
+{"mode":"chromium","width":1280,"height":900,"checks":16,"failures":[]}
+Browser results: C:\Users\blake\AppData\Local\Temp\po-release-yhguBD\results.json

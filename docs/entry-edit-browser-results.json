@@ -1,0 +1,19 @@
+{
+  "environment": "Isolated Chromium fixture; no Supabase connection or live data",
+  "results": [
+    {
+      "mode": "chromium",
+      "width": 390,
+      "height": 844,
+      "checks": 48,
+      "failures": []
+    },
+    {
+      "mode": "chromium",
+      "width": 1280,
+      "height": 900,
+      "checks": 48,
+      "failures": []
+    }
+  ]
+}

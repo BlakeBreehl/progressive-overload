@@ -1,11 +1,12 @@
 export type TrackingType = 'repetitions' | 'distance'
+export type ProgressionDirection = 'higher_is_better' | 'lower_is_better'
 export type LoadMode = 'weight_reps' | 'reps_only'
 export type DistanceUnit = 'meters' | 'kilometers' | 'miles' | 'yards' | 'feet'
 export type MuscleGroup = 'Legs' | 'Core' | 'Arms' | 'Back' | 'Chest' | 'Shoulders' | 'Olympic Lifts'
 export const muscleGroups: MuscleGroup[] = ['Legs','Core','Arms','Back','Chest','Shoulders','Olympic Lifts']
 export const muscleTags = ['Calves','Quads','Hamstrings','Glutes','Abductors','Adductors','Abdominals','Obliques','Lower Back','Erectors','Upper Chest','Mid Chest','Lower Chest','Biceps','Triceps','Forearms','Front Delts','Side Delts','Rear Delts','Lats','Traps'] as const
-export type Exercise = { id:string; userId:string; name:string; trackingType:TrackingType; loadMode?:LoadMode; majorMuscleGroups:MuscleGroup[]; muscleTags:string[]; isCompound:boolean; archived:boolean; createdAt:string; updatedAt:string; usageCount:number; lastUsedAt:string|null; prWeight?:number; lastWeight?:number; lastReps?:number }
-export type StrengthSet = { id?:string; clientKey?:string; exerciseId:string; setOrder:number; trackingType:TrackingType; weightUnit?:'lb'|'kg'; loadMode?:LoadMode; weight?:number; reps?:number; load?:number; distance?:number; distanceUnit?:DistanceUnit; laps?:number; durationSeconds?:number; notes?:string }
+export type Exercise = { id:string; userId:string; name:string; trackingType:TrackingType; loadMode?:LoadMode; progressionDirection?:ProgressionDirection; majorMuscleGroups:MuscleGroup[]; muscleTags:string[]; isCompound:boolean; archived:boolean; createdAt:string; updatedAt:string; usageCount:number; lastUsedAt:string|null; prWeight?:number; lastWeight?:number; lastReps?:number }
+export type StrengthSet = { id?:string; clientKey?:string; exerciseId:string; setOrder:number; trackingType:TrackingType; weightUnit?:'lb'|'kg'; loadMode?:LoadMode; progressionDirection?:ProgressionDirection; weight?:number; reps?:number; load?:number; distance?:number; distanceUnit?:DistanceUnit; laps?:number; durationSeconds?:number; notes?:string }
 export type WorkoutExercise = { key:string; exercise:Exercise|null; sets:StrengthSet[] }
 export type WorkoutDraft = { id?:string; originalPerformedAt?:string; date:string; locationId:string|null; notes:string; durationSeconds?:number; exercises:WorkoutExercise[] }
 export type Location = { id:string; name:string; isDefault:boolean; archived:boolean }

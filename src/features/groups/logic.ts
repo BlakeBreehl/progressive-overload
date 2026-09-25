@@ -10,8 +10,8 @@ export function calendarStart(period:string,now=new Date()){
   return date;
 }
 export function rankMembers<T extends {member_id:string;display_name:string;value:number|null}>(rows:T[]){
-  const sorted=[...rows].sort((a,b)=>(b.value??-Infinity)-(a.value??-Infinity)||a.display_name.localeCompare(b.display_name)||a.member_id.localeCompare(b.member_id));
-  return sorted.map((row,index)=>({...row,rank:row.value===null?null:sorted.findIndex(other=>other.value===row.value)+1,tied:row.value!==null&&sorted.some((other,i)=>i!==index&&other.value===row.value)}));
+  const sorted=[...rows].sort((a,b)=>(b.value??-Infinity)-(a.value??-Infinity)||a.display_name.trim().toLowerCase().localeCompare(b.display_name.trim().toLowerCase())||a.member_id.localeCompare(b.member_id));
+  return sorted.map((row,index)=>({...row,rank:row.value===null?null:index+1,tied:false}));
 }
 export function strengthRanks(data:GroupSummary,metric:'sets'|'weight'|'reps'|'combined'='sets'){
   return rankMembers(data.members.filter(member=>member.sharing_progress!==false).map(member=>{const prs=data.prs.find(row=>row.member_id===member.member_id);return {...member,value:metric==='sets'?data.sets.filter(row=>row.member_id===member.member_id).reduce((sum,row)=>sum+Number(row.total),0):metric==='weight'?Number(prs?.weight_prs??0):metric==='reps'?Number(prs?.rep_prs??0):Number(prs?.weight_prs??0)+Number(prs?.rep_prs??0)};}));

@@ -1,3 +1,4 @@
+import {StepsProgress} from '../cardio/StepsProgress';
 import {SetsByMuscleGroup} from "../strength/SetsByMuscleGroup";
 import {distanceMiles} from "../../lib/distanceUnits";
 import {orderPerformed} from "../../lib/performedOrder";
@@ -6,7 +7,7 @@ import {exerciseTableRows,defaultExerciseSort,type ExerciseSort} from './exercis
 import {Pagination} from '../../components/Pagination';
 import {lineType,defaultLineStyle,type LineStyle} from '../weight/chart';
 import { comparisonWeight, convertWeight, displayWeight, type WeightUnit } from "../../lib/weightUnits";
-import { strengthModePoints, strengthModes, selectedStrengthMode, type ModeSelection, type StrengthMode } from "./strengthModes";
+import { strengthModePoints, isAssistedProgress, strengthModes, selectedStrengthMode, type ModeSelection, type StrengthMode } from "./strengthModes";
 import { formatMetric, metricAxis } from "../../lib/metricTicks";
 import { detectRepetitionPrs, localDateKey } from "../strength/logic";
 import { useEffect, useState } from "react";
@@ -21,7 +22,7 @@ import {
   YAxis,
 } from "recharts";
 import type { ModuleKey, ModuleState } from "../../domain/modules";
-import { relationObject } from "../../lib/supabaseError";
+import { dataLoadMessage, relationObject } from "../../lib/supabaseError";
 import { WeightFeature } from "../weight/WeightFeature";
 import { Combobox, Select } from "../../components/SelectionControls";
 import { ChartControls, defaultAxisSettings, paddedDomain, rangeDates } from "../../components/ChartControls";
@@ -34,7 +35,7 @@ import {
   type StrengthPoint,
 } from "./logic";
 import { defaultStrengthExercise } from "./defaultExercise";
-import { loadStrengthProgressRows, strengthPrEvidence, strengthExerciseUsage, type StrengthProgressRow } from "./repository";
+import { loadCardioProgressRows, loadStrengthProgressRows, strengthPrEvidence, strengthExerciseUsage, type StrengthProgressRow } from "./repository";
 import { TimeXAxis } from "../../components/TimeXAxis";
 import { fullLocalDateLabel } from "../../lib/timeAxis";
 
@@ -52,6 +53,7 @@ type CardioRow = {
   performed_at: string;
   created_at?: string;
   duration_seconds: number;
+  step_count?:number|null;
   distance: number | null;
   distance_unit: string | null;
   speed: number | null;
@@ -95,7 +97,7 @@ function parseStrength(
 ): ParsedStrength[] {
   const badges=new Map(detectRepetitionPrs(strengthPrEvidence(rows)).map(pr=>[pr.setKey,pr.kinds[0]]));
   const dated = rows.flatMap((row) => {
-    const exercise = relationObject<{ id: string; name: string }>(
+    const exercise = relationObject<{ id: string; name: string; progression_direction?:string }>(
         row.exercise,
         "progress.strength.exercise",
       ),
@@ -105,6 +107,7 @@ function parseStrength(
       }>(row.workout, "progress.strength.workout");
     if (!exercise || !workout || !Number.isFinite(Date.parse(workout.performed_at)))
       return [];
+    if(exercise.progression_direction==='lower_is_better'&&row.weight==null)return [];
     const distance=row.tracking_type==='distance',rawDistance=row.distance??row.laps??row.duration_seconds;
     if(distance?(rawDistance==null||!Number.isFinite(rawDistance)||rawDistance<0):(row.reps==null||!Number.isInteger(row.reps)||row.reps<1||row.weight!=null&&(!Number.isFinite(row.weight)||row.weight<0)))return [];
     const distanceResult=distance?Number(rawDistance):0;
@@ -112,6 +115,7 @@ function parseStrength(
     return [
       {
         id:row.id,
+        progressionDirection:exercise.progression_direction,
         date: day,
         weight: distance?distanceResult:convertWeight(Number(row.weight),(row as StrengthRow).weight_unit??"lb",unit),
         comparisonWeight:distance?(row.distance!=null?normalizeDistance(distanceResult,row.distance_unit??'meters','meters'):distanceResult):comparisonWeight(Number(row.weight),row.weight_unit??"lb"),
@@ -130,7 +134,7 @@ function parseStrength(
     ];
   });
   const summaries = historical.flatMap((row) => {
-    const exercise = relationObject<{ id: string; name: string }>(
+    const exercise = relationObject<{ id: string; name: string; progression_direction?:string }>(
       row.exercise,
       "progress.strength.historical.exercise",
     );
@@ -256,7 +260,7 @@ function StrengthTable({
                   >
                     {candidate ? (
                       <>
-                        {candidate.distanceLabel??(candidate.repsOnly ? `${candidate.reps} reps` : `${candidate.weightLabel??String(candidate.weight)} ${unit} x ${candidate.reps}`)}
+                        {candidate.distanceLabel??(candidate.repsOnly ? `${candidate.reps} reps` : `${candidate.weightLabel??String(candidate.weight)} ${unit}${candidate.progressionDirection==='lower_is_better'?' assistance':''} × ${candidate.reps}`)}
                         {candidate.achievement && <span className="sr-only">{candidate.achievement === "weight" ? "Weight PR" : candidate.achievement === "reps" ? "Rep PR" : "First Entry"}</span>}
                         {candidate.source !== "dated" && (
                           <span className="block text-[10px] text-slate-500">
@@ -308,14 +312,16 @@ export function StrengthProgress({
       ).entries(),
     ],
     repsOnly=!isDistance&&!rows.some(row=>row.exercise_id===exercise&&row.weight!=null&&Number.isFinite(row.weight)&&row.weight>=0),
-    effectiveMode=selectedStrengthMode(modeSelection,rows,exercise),
+    assisted=isAssistedProgress(rows,exercise),
+    requestedMode=selectedStrengthMode(modeSelection,rows,exercise),
+    effectiveMode=assisted&&requestedMode==='one'?'repWeight':requestedMode,
     chart=strengthModePoints(rows,exercise,effectiveMode,{start:axisDates.start,end:axisDates.end,location,unit:unit as WeightUnit}),
     activePoint=chart.find(point=>point.id===activeSet),
     chartUnit=isDistance?(distancePoints[0]?.distanceUnit??"distance"):repsOnly?"reps":unit,
     metric=isDistance?'distance' as const:repsOnly?'reps' as const:'weight' as const,
     values=chart.map(point=>point.result),
     strengthDomain=paddedDomain(values,axes,metric==='weight'?5:metric==='reps'?1:0),
-    lineLabel=isDistance?'Distance':repsOnly?'Reps':effectiveMode==='one'?'One Rep Max':effectiveMode==='repWeight'?'Rep Weight':'Logged Sets',
+    lineLabel=isDistance?'Distance':repsOnly?'Reps':effectiveMode==='one'?'One Rep Max':effectiveMode==='repWeight'?(assisted?'Assistance Progress':'Rep Weight'):'Logged Sets',
     months = Array.from({ length: 12 }, (_, index) => {
       const value = new Date();
       value.setDate(1);
@@ -344,7 +350,7 @@ export function StrengthProgress({
           ]}
           onChange={setLocation}
         />
-        <Select label="Graph mode" value={effectiveMode} options={strengthModes.map(option=>({...option,disabled:(isDistance||repsOnly)&&option.value!=='all'}))} onChange={value=>setModeSelection({exerciseId:exercise,mode:value as StrengthMode})} />
+        <Select label="Graph mode" value={effectiveMode} options={strengthModes.filter(option=>!assisted||option.value!=='one').map(option=>({...option,label:assisted&&option.value==='repWeight'?'Assistance Progress':option.label,disabled:(isDistance||repsOnly)&&option.value!=='all'}))} onChange={value=>setModeSelection({exerciseId:exercise,mode:value as StrengthMode})} />
         <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={chartUnit}><Select label="Line Style" value={lineStyle} options={[{value:"straight",label:"Straight"},{value:"smooth",label:"Smooth"}]} onChange={value=>setLineStyle(value as LineStyle)}/></ChartControls></div>
 
       </div>
@@ -352,6 +358,7 @@ export function StrengthProgress({
         <h2 className="font-display text-lg font-bold text-ink">
           {exerciseName} Progress
         </h2>
+        {effectiveMode==='repWeight'&&<p className="mt-1 text-xs text-slate-500">{assisted?'Less assistance is progress · 4+ reps':'Best weight · 4+ reps'}</p>}
         <div className="mt-3 h-80">
           {chart.length ? (
             <ResponsiveContainer minWidth={0}>
@@ -405,6 +412,7 @@ type CardioPoint = {
     location?: string;
   locationId: string;
   duration: number;
+  steps?:number;
   distance?: number;
   unit?: string;
   speed?: number;
@@ -413,7 +421,7 @@ type CardioPoint = {
   difficulty?: number;
 };
 export function CardioProgress({ rows }: { rows: CardioRow[] }) {
-  const [metric,setMetric]=useState<"duration"|"distance"|"speed"|"pace">("duration");
+  const [metric,setMetric]=useState<"duration"|"distance"|"speed"|"pace"|"steps">("duration");
   const points: CardioPoint[] = rows.map((row) => {
       const name =
           relationObject<{ name: string }>(
@@ -436,6 +444,7 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
         location,
         locationId: row.location_id ?? "",
         duration: row.duration_seconds,
+        steps:row.step_count??undefined,
         distance: distanceMiles(row.distance,row.distance_unit) ?? undefined,
         unit: "mi",
         speed: metrics?.speedMph ?? row.speed ?? undefined,
@@ -502,11 +511,11 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
           options={names.map((name) => ({ value: name, label: name }))}
           onChange={setSelected}
         />
-        <Combobox label="Metric" value={metric} options={[{value:"duration",label:"Duration"},{value:"distance",label:"Distance"},{value:"speed",label:"Average speed"},{value:"pace",label:"Average pace"}]} onChange={value=>setMetric(value as typeof metric)} />
-        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={metric==="duration"?"seconds":metric==="pace"?"seconds/mile":metric==="speed"?"mph":"miles"}/></div>
+        <Combobox label="Metric" value={metric} options={[{value:"duration",label:"Duration"},{value:"distance",label:"Distance"},{value:"speed",label:"Average speed"},{value:"pace",label:"Average pace"},{value:"steps",label:"Steps"}]} onChange={value=>setMetric(value as typeof metric)} />
+        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={metric==="steps"?"steps":metric==="duration"?"seconds":metric==="pace"?"seconds/mile":metric==="speed"?"mph":"miles"}/></div>
         <Combobox label="Location" value={location} options={[{ value: "", label: "All locations" }, { value: "__none__", label: "No location" }, ...locations.map(([id, name]) => ({ value: id, label: name }))]} onChange={setLocation} />
       </div>
-      <div className="surface-card">
+      {metric==="steps"?<StepsProgress entries={visible} axes={axes}/>:<div className="surface-card">
         <h2 className="font-display text-lg font-bold text-ink">
           {activity} Progress
         </h2>
@@ -562,6 +571,7 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
           )}
         </div>
       </div>
+      }
       {table("Weekly totals", weekly)}
       {table("Monthly totals", monthly)}
     </div>
@@ -691,24 +701,19 @@ export function ProgressFeature({
     [choice, setChoice] = useState<ModuleKey>(tabs[0] ?? "strength"),
     selected = tabs.includes(choice) ? choice : tabs[0],
     [state, setState] = useState<LoadState>({ key: "", data: [], error: "" }),
+    [attempt,setAttempt]=useState(0),
     key = `${userId}:${selected}`,
     loading = selected !== "weight" && state.key !== key;
   useEffect(() => {
     if (!selected || selected === "weight") return;
     let active = true;
-    if(selected==="strength"){
-      loadStrengthProgressRows(client,userId).then(data=>{if(active)setState({key,data,error:""})}).catch(()=>{if(active)setState({key,data:[],error:"Progress data could not load. Check your connection and retry."})});
+    if(selected==="strength"||selected==="cardio"){
+      const request=selected==='strength'?loadStrengthProgressRows(client,userId):loadCardioProgressRows(client,userId);
+      request.then(data=>{if(active)setState({key,data,error:""})}).catch(error=>{if(active)setState({key,data:[],error:dataLoadMessage('Progress',error)})});
       return()=>{active=false};
     }
     const query =
-      selected === "cardio"
-          ? client
-              .from("cardio_sessions")
-              .select(
-                "id,performed_at,created_at,duration_seconds,distance,distance_unit,speed,incline,difficulty,location_id,activity:cardio_activities!cardio_activity_owned_fk(name),location:locations!cardio_location_owned_fk(name)",
-              )
-              .eq("user_id", userId)
-          : client
+      client
               .from("mobility_sessions")
               .select(
                 "id,performed_at,created_at,activity_id,activity:mobility_activities!mobility_activity_owned_fk(name,tracking_type,areas:mobility_activity_area_assignments!mobility_area_owned_fk(body_area)),sets:mobility_sets!mobility_sets_session_owned_fk(duration_seconds,reps)",
@@ -720,14 +725,14 @@ export function ProgressFeature({
         key,
         data: (result.data ?? []) as ProgressRows,
         error: result.error
-          ? "Progress data could not load. Check your connection and retry."
+          ? dataLoadMessage('Progress',result.error)
           : "",
       });
     });
     return () => {
       active = false;
     };
-  }, [client, userId, selected, key]);
+  }, [client, userId, selected, key,attempt]);
   if (!tabs.length)
     return <div className="empty-card">Enable a module to view Progress.</div>;
   return (
@@ -749,7 +754,7 @@ export function ProgressFeature({
         {loading ? (
           <div className="surface-card">Loading Progress…</div>
         ) : state.error ? (
-          <div className="surface-card text-red">{state.error}</div>
+          <div className="surface-card text-red" role="alert">{state.error}<button className="secondary-button mt-3" onClick={()=>{setState({key:'',data:[],error:''});setAttempt(value=>value+1);}}>Retry</button></div>
         ) : selected === "weight" ? (
           <WeightFeature client={client} userId={userId} unit={weightUnit} />
         ) : selected === "strength" ? (

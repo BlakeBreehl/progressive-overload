@@ -3,9 +3,10 @@ import { normalizeExerciseName } from "./logic";
 import { planStarterSeed, starterExercises } from "./starterLibrary";
 
 describe("private starter library v2", () => {
+  it('does not duplicate punctuated or plural assisted starter equivalents',()=>{const pending=planStarterSeed(['ASSISTED DIPS',' Assisted Pull-Ups ','assisted chin_up'],false);expect(pending.filter(e=>e.progressionDirection==='lower_is_better')).toEqual([]);expect(planStarterSeed(['Custom Assisted Dip'],false).some(e=>e.name==='Assisted Dip')).toBe(true);});
   it("contains every canonical name once", () => {
-    expect(starterExercises).toHaveLength(119);
-    expect(new Set(starterExercises.map((item) => normalizeExerciseName(item.name))).size).toBe(119);
+    expect(starterExercises).toHaveLength(122);
+    expect(new Set(starterExercises.map((item) => normalizeExerciseName(item.name))).size).toBe(122);
     expect(starterExercises.map((item) => item.name)).toEqual(expect.arrayContaining(["Squat", "Dumbbell Bench Press", "Dip", "Weighted Dip"]));
   });
   it("marks bodyweight movements reps-only and weighted variants weight-plus-reps", () => {
