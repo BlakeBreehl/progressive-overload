@@ -13,6 +13,6 @@ export function YourSets({client,userId}:{client:SupabaseClient;userId:string}){
       <div className="relative h-60"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data.groups} dataKey="value" nameKey="name" innerRadius="60%" outerRadius="85%" isAnimationActive={false}>{data.groups.map((group,index)=><Cell key={group.name} fill={colors[index]}/>)}</Pie><Tooltip formatter={value=>`${value} sets (${(Number(value)/data.total*100).toFixed(1)}%)`}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 grid place-content-center text-center"><strong className="text-3xl text-ink">{data.total}</strong><span className="text-xs">total sets</span></div></div>
       <ul className="grid grid-cols-2 gap-2 text-xs">{data.groups.map((group,index)=><li key={group.name}><span aria-hidden="true" style={{background:colors[index]}} className="mr-2 inline-block size-2 rounded-full"/>{group.name}: <strong>{group.value}</strong></li>)}</ul>
     </>}
-    <p className="mt-3 text-xs text-slate-500">Each saved set counts once toward its exercise’s primary muscle group. Compound and multi-group exercises are not counted twice.</p>
+    <p className="mt-3 text-xs text-slate-500">Each successful set counts once toward its exercise’s primary muscle group. Compound and multi-group exercises are not counted twice.</p>
   </section>;
 }

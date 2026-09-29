@@ -115,6 +115,7 @@ function parseStrength(
     return [
       {
         id:row.id,
+        trackingType:row.tracking_type,
         progressionDirection:exercise.progression_direction,
         date: day,
         weight: distance?distanceResult:convertWeight(Number(row.weight),(row as StrengthRow).weight_unit??"lb",unit),
@@ -138,7 +139,7 @@ function parseStrength(
       row.exercise,
       "progress.strength.historical.exercise",
     );
-    if (!exercise || row.weight == null || row.reps == null) return [];
+    if (!exercise || row.weight == null || row.reps == null || !Number.isInteger(row.reps) || row.reps < 1) return [];
     const period =
       row.period_type === "yearly"
         ? row.period_start.slice(0, 4)

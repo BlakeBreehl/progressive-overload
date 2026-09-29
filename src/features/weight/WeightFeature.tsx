@@ -1,3 +1,4 @@
+import { useUnsavedForm } from '../../lib/unsavedNavigation';
 import {safeSupabaseDiagnostic} from "../../lib/supabaseError";
 import { displayWeight, normalizeReadings } from "../../lib/weightUnits";
 import { bodyweightChart, defaultLineStyle, lineType, type LineStyle } from "./chart";
@@ -118,6 +119,7 @@ export function WeightFeature({
     [historyItems,setHistoryItems]=useState<WeighIn[]>([]),
     [historyTotal,setHistoryTotal]=useState(0),
     [historyLoading,setHistoryLoading]=useState(false),[revision,setRevision]=useState(0);
+  useUnsavedForm(form,saving);
   const [weightAxes,setWeightAxes]=useState<AxisSettings>({...defaultAxisSettings,range:"3m"});
   const load = useCallback(async () => {
     try {

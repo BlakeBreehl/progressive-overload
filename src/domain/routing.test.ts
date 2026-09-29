@@ -13,3 +13,12 @@ describe('entry routes', () => {
     expect(parseAppRoute('/progress').creating).toBe(false)
   })
 })
+
+it('returns every nested module path to its canonical landing, retaining the legacy Groups alias',()=>{
+ for(const screen of ['home','strength','cardio','flexibility','weight','progress','leaderboards'] as const){
+  const home=screenPath(screen);
+  for(const sub of ['new','edit/id','detail/id','history','success','manage'])expect(parseAppRoute(home+'/'+sub).screen).toBe(screen);
+ }
+ expect(screenPath('leaderboards')).toBe('/groups');
+ expect(parseAppRoute('/leaderboards/detail')).toEqual({screen:'leaderboards',creating:false});
+});

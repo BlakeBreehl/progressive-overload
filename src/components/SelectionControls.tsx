@@ -174,104 +174,31 @@ export function Select({
     </div>
   );
 }
-export function Combobox({
-  label,
-  value,
-  options,
-  onChange,
-  placeholder = "Search…",
-  disabled = false,
-  footer,
-  autoFocus = false,
-}: {
-  label: string;
-  value: string;
-  options: SelectOption[];
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  footer?: ReactNode;
-  autoFocus?: boolean;
+export function Combobox({label,value,options,onChange,placeholder='Search...',disabled=false,footer,autoFocus=false,action}: {
+  label:string;value:string;options:SelectOption[];onChange:(value:string)=>void;placeholder?:string;disabled?:boolean;footer?:ReactNode;autoFocus?:boolean;action?:{label:string;onClick:()=>void};
 }) {
-  const inputRef=useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState(""),
-    [menuStyle, setMenuStyle] = useState<ReturnType<typeof position>>({}),
-    filtered = useMemo(
-      () =>
-        options.filter((x) =>
-          (x.label + " " + (x.description ?? ""))
-            .toLowerCase()
-            .includes(query.toLowerCase()),
-        ),
-      [options, query],
-    ),
-    selected = options.find((x) => x.value === value);
-  useMenuPosition(!!query,inputRef,setMenuStyle);
-  return (
-    <div className="combobox-control">
-      <label className="field-label">
-        {label}
-        <input
-          ref={inputRef}
-          autoComplete="off"
-          enterKeyHint="search"
-          autoFocus={autoFocus}
-          className="field-input"
-          role="combobox"
-          aria-expanded="true"
-          aria-autocomplete="list"
-          disabled={disabled}
-          placeholder={selected?.label ?? placeholder}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setMenuStyle(position(e.currentTarget));
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setQuery("");
-            if (
-              event.key === "Enter" &&
-              filtered.length === 1 &&
-              !filtered[0].disabled
-            ) {
-              event.preventDefault();
-              onChange(filtered[0].value);
-              setQuery("");
-            }
-          }}
-        />
-      </label>
-      {query &&
-        createPortal(
-          <div role="listbox" className="combobox-menu" style={menuStyle}>
-          {filtered.map((option) => (
-            <button
-              role="option"
-              aria-selected={option.value === value}
-              disabled={option.disabled}
-              className="select-option"
-              key={option.value}
-              onClick={() => {
-                onChange(option.value);
-                setQuery("");
-              }}
-            >
-              <span>
-                <strong>{option.label}</strong>
-                {option.description && <small>{option.description}</small>}
-              </span>
-              {option.value === value && <span className="text-red">✓</span>}
-            </button>
-          ))}
-          {!filtered.length && (
-            <div className="p-3 text-sm text-slate-500">No matches.</div>
-          )}
-          {footer}
-          </div>,
-          document.body,
-        )}
-    </div>
-  );
+  const inputRef=useRef<HTMLInputElement>(null),actionRef=useRef<HTMLButtonElement>(null);
+  const [id]=useState(()=>crypto.randomUUID()),[query,setQuery]=useState(''),[open,setOpen]=useState(false),[active,setActive]=useState(0),[menuStyle,setMenuStyle]=useState<ReturnType<typeof position>>({});
+  const filtered=useMemo(()=>options.filter(option=>(option.label+' '+(option.description??'')).toLowerCase().includes(query.toLowerCase())),[options,query]);
+  const selected=options.find(option=>option.value===value);
+  useMenuPosition(open,inputRef,setMenuStyle);
+  const close=()=>{setOpen(false);setQuery('');};
+  const choose=(option:SelectOption)=>{onChange(option.value);close();inputRef.current?.focus();};
+  const activateAction=()=>{close();inputRef.current?.focus();action?.onClick();};
+  const enabled=filtered.map((option,index)=>option.disabled?-1:index).filter(index=>index>=0);
+  if(action)enabled.push(filtered.length);
+  const move=(direction:number)=>{const at=enabled.indexOf(active),next=enabled[Math.max(0,Math.min(enabled.length-1,at+direction))]??0;setActive(next);if(action&&next===filtered.length)actionRef.current?.focus();else inputRef.current?.focus();};
+  return <div className="combobox-control" onKeyDown={event=>{
+    if(event.key==='Escape'&&open){event.preventDefault();event.stopPropagation();close();inputRef.current?.focus();}
+    else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(!open){setMenuStyle(position(inputRef.current));setOpen(true);setActive(enabled[0]??0);}else move(event.key==='ArrowDown'?1:-1);}
+    else if(open&&event.key==='Enter'&&event.target===inputRef.current){event.preventDefault();if(action&&active===filtered.length)activateAction();else if(filtered[active]&&!filtered[active].disabled)choose(filtered[active]);}
+  }}>
+    <label className="field-label" id={`${id}-label`}>{label}<input ref={inputRef} autoComplete="off" enterKeyHint="search" autoFocus={autoFocus} className="field-input" role="combobox" aria-expanded={open} aria-controls={`${id}-list`} aria-activedescendant={open&&active<filtered.length?`${id}-${active}`:undefined} aria-autocomplete="list" disabled={disabled} placeholder={selected?.label??placeholder} value={query} onClick={()=>{setMenuStyle(position(inputRef.current));setOpen(true);}} onChange={event=>{setQuery(event.target.value);setActive(0);setMenuStyle(position(event.currentTarget));setOpen(true);}}/></label>
+    {open&&createPortal(<><button type="button" className="select-dismiss" aria-label={`Close ${label} options`} onClick={close}/><div className="combobox-menu" style={menuStyle}><div id={`${id}-list`} role="listbox" aria-labelledby={`${id}-label`}>
+      {filtered.map((option,index)=><button id={`${id}-${index}`} type="button" role="option" aria-selected={option.value===value} disabled={option.disabled} className={`select-option ${active===index?'select-option-active':''}`} key={option.value} onClick={()=>choose(option)}><span><strong>{option.label}</strong>{option.description&&<small>{option.description}</small>}</span>{option.value===value&&<span aria-hidden="true">&#10003;</span>}</button>)}
+      {!filtered.length&&<p className="p-3 text-sm text-slate-500">No matches.</p>}
+    </div>{action&&<button ref={actionRef} type="button" className="select-option sticky bottom-0 bg-white text-red" aria-label={action.label} onClick={activateAction}>{action.label}</button>}{footer}</div></>,document.body)}
+  </div>;
 }
 export function MultiSelect({
   label,

@@ -1,3 +1,4 @@
+import { useUnsavedForm } from '../../lib/unsavedNavigation';
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -85,6 +86,8 @@ export function FlexibilityFeature({
     [historyArea,setHistoryArea]=useState(""),
     [historyTracking,setHistoryTracking]=useState("all"),
     [historyPage,setHistoryPage]=useState(1);
+  useUnsavedForm(form,saving);
+  useUnsavedForm(editor!==undefined?{name,tracking,areas}:null,false,editor?.id??null);
   const [historyTotal,setHistoryTotal]=useState(0),[historyLoading,setHistoryLoading]=useState(false),[debouncedHistorySearch,setDebouncedHistorySearch]=useState("");
   useEffect(()=>{const timer=setTimeout(()=>setDebouncedHistorySearch(historySearch),250);return()=>clearTimeout(timer)},[historySearch]);
   const load = useCallback(async () => {

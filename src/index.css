@@ -58,3 +58,10 @@ button{touch-action:manipulation}
 
 .dialog-overlay{padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left))}
 .confirm-dialog{max-height:calc(var(--keyboard-height,100dvh) - max(1rem,env(safe-area-inset-top)) - max(1rem,env(safe-area-inset-bottom)))}
+.strength-success { min-height: calc(100svh - 12rem - env(safe-area-inset-bottom)); display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom); }
+.success-mark { display:grid; place-items:center; width:4rem; height:4rem; margin-bottom:1rem; border-radius:50%; background:#d71920; color:white; font-size:2rem; }
+.saved-set { overflow-wrap:anywhere; border-bottom:1px solid #e2e8f0; padding-bottom:1rem; }
+.notes-toggle { display:flex; align-items:center; gap:.5rem; min-height:44px; font-weight:600; }
+.notes-chevron { display:inline-block; transition:transform 150ms ease; }
+.notes-chevron-open { transform:rotate(90deg); }
+@media (prefers-reduced-motion:reduce) { .notes-chevron { transition:none; } }

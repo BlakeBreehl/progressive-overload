@@ -1,3 +1,5 @@
+import { hasUnsavedChanges } from './lib/unsavedNavigation';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import {watchConnectionRecovery} from "./lib/connectionRecovery";
 import {retryableLazy as lazy} from "./lib/retryableLazy";
 import {startAccountBootstrap} from "./lib/accountBootstrap";
@@ -489,6 +491,8 @@ function App() {
   const [onboarded, setOnboarded] = useState(false),
     [route, setRoute] = useState(initialRoute),
     [addOpen, setAddOpen] = useState(false);
+  const [moduleRevision,setModuleRevision]=useState(0);
+  const [pendingNavigation,setPendingNavigation]=useState<(()=>void)|null>(null);
   const screen = route.screen;
   const [enabled, setEnabled] = useState<ModuleState>(defaultModules),
     [loadedUserId, setLoadedUserId] = useState<string | null>(null),
@@ -532,10 +536,14 @@ function App() {
     [enabled],
   );
   useEffect(() => {
-    const onPop = () => setRoute(parseAppRoute(window.location.pathname));
+    const onPop = () => {
+      const next=parseAppRoute(window.location.pathname);
+      const apply=()=>{setRoute(next);setModuleRevision(value=>value+1);window.history.replaceState({},'',next.creating?createPath(next.screen as ModuleKey):screenPath(next.screen));window.scrollTo({top:0});};
+      if(hasUnsavedChanges()){window.history.pushState({},'',route.creating?createPath(route.screen as ModuleKey):screenPath(route.screen));setPendingNavigation(()=>apply);}else apply();
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [route]);
   const navigate = (
     next: ReturnType<typeof parseAppRoute>,
     replace = false,
@@ -550,15 +558,16 @@ function App() {
       path,
     );
     setRoute(next);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
-  const go = (s: Screen) => navigate({ screen: s, creating: false });
-  const triggerAdd = (key: ModuleKey) => {
+  const requestNavigation=(action:()=>void)=>{if(hasUnsavedChanges())setPendingNavigation(()=>action);else action();};
+  const go = (s: Screen) => requestNavigation(()=>{setAddOpen(false);setModuleRevision(value=>value+1);navigate({ screen: s, creating: false });});
+  const triggerAdd = (key: ModuleKey) => requestNavigation(()=>{
     setAddOpen(false);
     navigate({ screen: key, creating: true }, false, {
       returnTo: window.location.pathname,
     });
-  };
+  });
   const leaveCreate = (saved = false) => {
     if (saved) {
       navigate({ screen, creating: false }, true);
@@ -642,7 +651,7 @@ function App() {
       <header className="mobile-header">
         <Logo />
       </header>
-      <main className="content"><FeatureBoundary key={`${auth.session?.user.id}:${screen}`}>
+      <main className="content" inert={!!pendingNavigation}><FeatureBoundary key={`${auth.session?.user.id}:${screen}:${moduleRevision}`}>
         {screen === "home" ? (
           <Home
             enabled={enabled}
@@ -708,6 +717,7 @@ function App() {
           pick={triggerAdd}
         />
       )}
+      <ConfirmDialog open={!!pendingNavigation} title="Discard unsaved changes?" description="Your changes have not been saved." confirmLabel="Discard and Go to Module Home" cancelLabel="Stay" onCancel={()=>setPendingNavigation(null)} onConfirm={()=>{const action=pendingNavigation;setPendingNavigation(null);action?.();}}/>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import {startupTrace} from './startupDiagnostic';
 import {safeSupabaseDiagnostic} from './supabaseError';
 import type { SupabaseClient } from '@supabase/supabase-js';
-export const releaseId='progressive-overload-2.1-launch';
+export const releaseId='progressive-overload-2.2-launch';
 const eventName='release-dismissed';
 const key=(userId:string)=>releaseId+':'+userId;
 // Storage is a cross-tab notification, never authority for the initial decision.

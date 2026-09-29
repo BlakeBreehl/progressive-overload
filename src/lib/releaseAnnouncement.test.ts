@@ -12,7 +12,7 @@ const client={rpc} as never;
 beforeEach(()=>{saved=new Set();account='A';failedLoad=false;failedSave=false;rpc.mockClear();vi.stubGlobal('window',new EventTarget());vi.stubGlobal('localStorage',{setItem:vi.fn()});});
 afterEach(()=>vi.unstubAllGlobals());
 it('uses the fixed release identity and waits for authenticated readiness',async()=>{
- expect(releaseId).toBe('progressive-overload-2.1-launch');expect(await shouldAnnounce(client,'A',false)).toBe(false);expect(await shouldAnnounce(client,'',true)).toBe(false);expect(rpc).not.toHaveBeenCalled();expect(await shouldAnnounce(client,'A',true)).toBe(true);
+ expect(releaseId).toBe('progressive-overload-2.2-launch');expect(await shouldAnnounce(client,'A',false)).toBe(false);expect(await shouldAnnounce(client,'',true)).toBe(false);expect(rpc).not.toHaveBeenCalled();expect(await shouldAnnounce(client,'A',true)).toBe(true);
 });
 it.each(['refresh','cold start','route change','token refresh','component remount','PWA reopen','browser reopen','cleared local cache'])('honors the server after %s',async()=>{
  await acknowledgeRelease(client,'A');vi.stubGlobal('localStorage',{});expect(await shouldAnnounce(client,'A',true)).toBe(false);expect(rpc).toHaveBeenLastCalledWith('get_release_acknowledgement',{p_release_id:releaseId});
@@ -42,3 +42,10 @@ it('has no session persistence, runtime identity, native dialogs or production r
 });
 
 it('never resets or writes the original 2.0 acknowledgement',async()=>{const original='Aprogressive-overload-2.0-launch';saved.add(original);expect(await shouldAnnounce(client,'A',true)).toBe(true);await acknowledgeRelease(client,'A');expect(saved.has(original)).toBe(true);expect(saved.size).toBe(2);expect(rpc.mock.calls.every(([,args])=>args.p_release_id===releaseId)).toBe(true);});
+
+it('preserves both previous release acknowledgements independently',async()=>{
+ saved.add('Aprogressive-overload-2.0-launch');saved.add('Aprogressive-overload-2.1-launch');
+ expect(await shouldAnnounce(client,'A',true)).toBe(true);await acknowledgeRelease(client,'A');
+ expect([...saved].sort()).toEqual(['Aprogressive-overload-2.0-launch','Aprogressive-overload-2.1-launch','Aprogressive-overload-2.2-launch']);
+ account='B';expect(await shouldAnnounce(client,'B',true)).toBe(true);
+});

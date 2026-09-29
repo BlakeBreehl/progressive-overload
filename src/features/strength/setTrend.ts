@@ -13,6 +13,7 @@ export function setBucket(value:string,aggregation:SetAggregation){return aggreg
 export function setTrend(rows:StrengthProgressRow[],aggregation:SetAggregation,{start='',end='',location='',now=new Date()}={}){
  const buckets=new Map<string,{id:string;exercise:unknown}[]>(),seen=new Set<string>();
  for(const row of rows){
+  if(row.tracking_type==='repetitions'&&!(row.reps!=null&&Number.isInteger(row.reps)&&row.reps>0))continue;
   const workout=relationObject<{performed_at:string;location:{id:string}|null}>(row.workout,'set trend workout');
   if(!row.id||seen.has(row.id)||!workout||!Number.isFinite(parse(day(workout.performed_at)).getTime()))continue;
   const date=day(workout.performed_at);

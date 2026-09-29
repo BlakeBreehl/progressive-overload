@@ -1,3 +1,5 @@
+import { CollapsibleNotes } from '../../components/CollapsibleNotes';
+import { useUnsavedForm } from '../../lib/unsavedNavigation';
 import { changeExercise, exerciseChangeWarning, workoutEditDraft } from './exerciseChange';
 import { displayWeight, type WeightUnit } from "../../lib/weightUnits";
 import { YourSets } from "./YourSets";
@@ -44,19 +46,10 @@ import {
   type WorkoutDraft,
   type WorkoutExercise,
 } from "./types";
-import { QuickLiftForm } from "./QuickLiftForm";
 import { WorkoutCard } from "./WorkoutCard";
-import {
-  newQuickLift,
-  quickLiftToWorkout,
-  validateQuickLift,
-  type QuickLiftDraft,
-  type QuickLiftErrors,
-} from "./quickLog";
 
 type View =
   | "hub"
-  | "quick"
   | "quick-success"
   | "form"
   | "history"
@@ -77,7 +70,7 @@ const emptySet = (exercise: Exercise): StrengthSet =>
         loadMode: exercise.loadMode,
         progressionDirection: exercise.progressionDirection,
         weight: isRepsOnlyExercise(exercise) ? undefined : 0,
-        reps: 0,
+        reps: undefined,
       }
     : {
         exerciseId: exercise.id,
@@ -136,12 +129,13 @@ function PrBadges({ kinds }: { kinds: string[] }) {
 function SetText({ set, unit }: { set: StrengthSet; unit: string }) {
   return set.trackingType === "repetitions" ? (
     <>
-      {set.weight === undefined ? `${set.reps} reps` : `${displayWeight(set.weight,set.weightUnit??"lb",unit as WeightUnit)} ${unit}${set.progressionDirection === "lower_is_better" ? " assistance" : ""} × ${set.reps}`}
+      {set.reps === 0 && <span className="tag">Attempt</span>} {set.weight === undefined ? `${set.reps} reps` : `${displayWeight(set.weight,set.weightUnit??"lb",unit as WeightUnit)} ${unit}${set.progressionDirection === "lower_is_better" ? " assistance" : ""} × ${set.reps}`}
     </>
   ) : (
     <>
-      {displayWeight(set.load??0,set.weightUnit??"lb",unit as WeightUnit)} {unit} load · {set.distance} {set.distanceUnit} × {set.laps}{" "}
-      lap{set.laps === 1 ? "" : "s"}
+      {set.load != null && <>{displayWeight(set.load,set.weightUnit??"lb",unit as WeightUnit)} {unit} load · </>}
+      {set.distance != null ? `${set.distance} ${set.distanceUnit ?? ""}` : "Distance not recorded"}
+      {set.laps != null && <> × {set.laps} lap{set.laps === 1 ? "" : "s"}</>}
       {set.durationSeconds != null
         ? ` · ${formatDuration(set.durationSeconds)}`
         : ""}
@@ -342,14 +336,7 @@ function SetRow({
           {set.load !== undefined && <label className="field-label">Recorded load ({unit})<input className="field-input" type="number" min="0" step="any" value={set.load} onChange={event => number("load", event.target.value)} /></label>}
           {set.durationSeconds !== undefined && <label className="field-label">Duration (seconds, optional)<input className="field-input" type="number" min="0" step="any" value={set.durationSeconds} onChange={event => number("durationSeconds", event.target.value)} /></label>}
         </>}
-        <label className="field-label col-span-2">
-          Set notes (optional)
-          <input
-            className="field-input"
-            value={set.notes ?? ""}
-            onChange={(e) => {const notes=e.target.value;onChange(current=>({ ...current, notes }))}}
-          />
-        </label>
+        <CollapsibleNotes label="Set notes" value={set.notes ?? ""} onChange={notes=>onChange(current=>({...current,notes}))} />
       </div>
     </div>
   );
@@ -366,7 +353,9 @@ function WorkoutForm({
   onSave,
   onCancel,
   onCreateExercise,
+  legacy = false,
 }: {
+  legacy?: boolean;
   draft: WorkoutDraft;
   setDraft: Dispatch<SetStateAction<WorkoutDraft>>;
   exercises: Exercise[];
@@ -385,7 +374,7 @@ function WorkoutForm({
     <section>
       <p className="eyebrow">STRENGTH</p>
       <h1 className="page-title">
-        {draft.id ? "Edit workout" : "Add Strength Workout"}
+        {draft.id ? "Edit Entry" : "Log Lift"}
       </h1>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label className="field-label">
@@ -414,36 +403,7 @@ function WorkoutForm({
           }
         />
       </div>
-      <label className="field-label mt-4">
-        Workout notes (optional)
-        <textarea
-          className="field-input min-h-20 py-3"
-          value={draft.notes}
-          onChange={(e) => {const notes=e.target.value;setDraft(current=>({ ...current, notes }))}}
-        />
-      </label>
-      <label className="field-label mt-4 max-w-xs">
-        Workout duration (minutes, optional)
-        <input
-          className="field-input"
-          inputMode="numeric"
-          type="number"
-          min="0"
-          step="1"
-          value={
-            draft.durationSeconds === undefined
-              ? ""
-              : draft.durationSeconds / 60
-          }
-          onChange={(e) =>
-            setDraft(current=>({
-              ...current,
-              durationSeconds:
-                e.target.value === "" ? undefined : Number(e.target.value) * 60,
-            }))
-          }
-        />
-      </label>
+      <CollapsibleNotes label="Exercise notes" value={draft.notes} onChange={notes=>setDraft(current=>({...current,notes}))} />
       <div className="mt-6 space-y-4">
         {draft.exercises.map((block) => (
           <div className="surface-card" key={block.key}>
@@ -458,7 +418,7 @@ function WorkoutForm({
                   }
                 />
               </div>
-              <button
+              {legacy && <button
                 aria-label="Remove exercise"
                 className="icon-button mt-5 text-rose-300"
                 onClick={() =>
@@ -466,13 +426,13 @@ function WorkoutForm({
                 }
               >
                 ×
-              </button>
+              </button>}
             </div>
             {block.exercise && (
               <div className="mt-4 space-y-3">
                 {block.sets.map((set, si) => (
                   <SetRow
-                    key={set.id ?? set.clientKey ?? si}
+                    key={set.id ?? set.clientKey}
                     set={set}
                     index={si}
                     unit={set.weightUnit??(draft.id?"lb":unit)}
@@ -517,9 +477,9 @@ function WorkoutForm({
           </div>
         ))}
       </div>
-      <button className="secondary-button mt-4 w-full" onClick={addBlock}>
+      {legacy && <button className="secondary-button mt-4 w-full" onClick={addBlock}>
         + Add Another Exercise
-      </button>
+      </button>}
       {errors.length > 0 && (
         <div
           role="alert"
@@ -733,6 +693,7 @@ function ExerciseEditor({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [confirmMode, setConfirmMode] = useState(false);
+  useUnsavedForm(input,busy);
   const submit = async (confirmed = false) => {
     if (!input.name.trim()) {
       setError("Exercise name is required.");
@@ -1078,10 +1039,6 @@ export function StrengthFeature({
       exercises: [],
     }),
     [formErrors, setFormErrors] = useState<string[]>([]),
-    [quickDraft, setQuickDraft] = useState<QuickLiftDraft>(() =>
-      newQuickLift([],undefined,undefined,weightUnit),
-    ),
-    [quickErrors, setQuickErrors] = useState<QuickLiftErrors>({}),
     [saving, setSaving] = useState(false),
     [selected, setSelected] = useState<Workout | null>(null),
     [editor, setEditor] = useState<{ name: string } | null>(null),
@@ -1135,53 +1092,16 @@ export function StrengthFeature({
     ([id, k]) =>
       recentIds.has(id) && (k.includes("weight") || k.includes("reps")),
   ).length;
-  const openQuick = (date?: string, locationId?: string | null) => {
-    setQuickDraft(newQuickLift(locations, date, locationId,weightUnit));
-    setQuickErrors({});
-    setSuccessId(null);
-    setView("quick");
-  };
-  const startNew = () => openQuick();
-  useEffect(() => {
-    if (create)
-      queueMicrotask(() => {
-        setQuickDraft(newQuickLift(locations,undefined,undefined,weightUnit));
-        setQuickErrors({});
-        setSuccessId(null);
-        setView("quick");
-      });
-  }, [create, locations,weightUnit]);
+  const freshDraft = useCallback(():WorkoutDraft => ({date:today(),locationId:locations.find(l=>l.isDefault&&!l.archived)?.id??null,notes:'',exercises:[{key:uid(),exercise:null,sets:[]}]}),[locations]);
+  const [legacy,setLegacy]=useState(false);
+  useUnsavedForm(view==='form'?draft:null, saving);
+  const startNew = () => {setDraft(freshDraft());setLegacy(false);setFormErrors([]);setSuccessId(null);setView('form');};
+  const createStarted=useRef(false);
+  useEffect(()=>{if(!create){createStarted.current=false;return;}if(loading||createStarted.current)return;createStarted.current=true;setDraft(freshDraft());setLegacy(false);setView('form');},[create,loading,freshDraft]);
   const edit = (w: Workout) => {
+    setLegacy(new Set(w.sets.map(set=>set.exerciseId)).size>1);
     setDraft(workoutEditDraft(w));
     setView("form");
-  };
-  const submitQuick = async () => {
-    const errors = validateQuickLift(quickDraft);
-    setQuickErrors(errors);
-    if (Object.keys(errors).length || saving) return;
-    setSaving(true);
-    try {
-      const id = await saveWorkout(
-        client,
-        userId,
-        quickLiftToWorkout(quickDraft),
-      );
-      setSuccessId(id);
-      setSavedWorkout(await getWorkoutById(client,userId,id).catch(()=>null));
-      await load();
-      setSelected(null);
-      setView("quick-success");
-      onExitCreate(true);
-    } catch (e) {
-      setQuickErrors({
-        save:
-          e instanceof Error
-            ? e.message
-            : "Could not save the lift. Your entries are still here.",
-      });
-    } finally {
-      setSaving(false);
-    }
   };
   const submit = async () => {
     const errors = validateWorkout(draft);
@@ -1194,7 +1114,7 @@ export function StrengthFeature({
       setSavedWorkout(await getWorkoutById(client,userId,id).catch(()=>null));
       await load();
       setSelected(null);
-      setView("detail");
+      setView("quick-success");
       if (create) onExitCreate(true);
     } catch (e) {
       setFormErrors([
@@ -1222,76 +1142,20 @@ export function StrengthFeature({
         }}
       />
     );
-  if (view === "quick")
-    return (
-      <QuickLiftForm
-        draft={quickDraft}
-        onChange={setQuickDraft}
-        exercises={exercises}
-        locations={locations}
-        unit={quickDraft.weightUnit??weightUnit}
-        saving={saving}
-        errors={quickErrors}
-        onSave={submitQuick}
-        onCancel={() => {
-          setView("hub");
-          onExitCreate(false);
-        }}
-        onCreateExercise={(name) => setEditor({ name })}
-      />
-    );
   if (view === "quick-success") {
-    const w = savedWorkout?.id===successId?savedWorkout:workouts.find((x) => x.id === successId),
-      set = w?.sets[0];
-    return (
-      <section className="mx-auto max-w-xl">
-        <p className="eyebrow">LIFT SAVED</p>
-        <h1 className="page-title">Nice work.</h1>
-        <div className="surface-card mt-6">
-          {set && (
-            <>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-display text-xl font-bold text-ink">
-                    {set.exercise.name}
-                  </h2>
-                  <p className="mt-2 text-lg text-slate-700">
-                    <SetText set={set} unit={weightUnit} />
-                  </p>
-                </div>
-                <PrBadges kinds={prMap.get(set.id!) ?? []} />
-              </div>
-              <p className="mt-4 text-sm text-slate-500">
-                {new Date(w!.performedAt).toLocaleDateString()}
-                {w!.location ? ` · ${w!.location.name}` : ""}
-              </p>
-            </>
-          )}
-        </div>
-        <div className="mt-5 grid gap-3">
-          <button
-            className="primary-button"
-            onClick={() => openQuick(quickDraft.date, quickDraft.locationId)}
-          >
-            Log Another Exercise
-          </button>
-          <button
-            className="secondary-button"
-            disabled={!w}
-            onClick={() => w&&edit(w)}
-          >
-            <span aria-hidden="true">✎</span> Edit Entry
-          </button>
-          <button className="text-button py-3" onClick={() => setView("history")}>
-            Done / View History
-          </button>
-        </div>
-      </section>
-    );
+    const w = savedWorkout?.id===successId?savedWorkout:workouts.find(x=>x.id===successId);
+    return <section className="strength-success mx-auto max-w-2xl">
+      <div className="success-mark" aria-hidden="true">&#10003;</div><p className="eyebrow">STRENGTH SAVED</p><h1 className="page-title">Lift Logged</h1>
+      {w ? <div className="surface-card mt-6 flex-1"><p className="text-sm text-slate-500">{new Date(w.performedAt).toLocaleDateString()} &middot; {w.location?.name??'No location'}</p>
+        <div className="mt-5 space-y-4">{w.sets.map((set,index)=><div key={set.id??set.clientKey} className="saved-set"><h2 className="text-xl font-bold">{set.exercise.name}</h2>{w.sets.length>1&&<p className="eyebrow mt-2">Set {index+1}</p>}<p className="mt-2 text-lg"><SetText set={set} unit={weightUnit}/></p><PrBadges kinds={set.reps===0?[]:prMap.get(set.id!)??[]}/></div>)}</div>
+      </div>:<p role="status">Entry saved. Open History to reload its details.</p>}
+      <div className="mt-6 grid gap-3"><button className="primary-button" disabled={!w} onClick={()=>w&&edit(w)}>Edit Entry</button><button className="secondary-button" onClick={()=>setView('history')}>View Strength History</button><button className="secondary-button" onClick={()=>setView('hub')}>Done / Return to Strength</button></div>
+    </section>;
   }
   if (view === "form")
     return (
       <WorkoutForm
+        legacy={legacy}
         draft={draft}
         setDraft={setDraft}
         exercises={exercises}

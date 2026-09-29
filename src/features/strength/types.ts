@@ -8,6 +8,7 @@ export const muscleTags = ['Calves','Quads','Hamstrings','Glutes','Abductors','A
 export type Exercise = { id:string; userId:string; name:string; trackingType:TrackingType; loadMode?:LoadMode; progressionDirection?:ProgressionDirection; majorMuscleGroups:MuscleGroup[]; muscleTags:string[]; isCompound:boolean; archived:boolean; createdAt:string; updatedAt:string; usageCount:number; lastUsedAt:string|null; prWeight?:number; lastWeight?:number; lastReps?:number }
 export type StrengthSet = { id?:string; clientKey?:string; exerciseId:string; setOrder:number; trackingType:TrackingType; weightUnit?:'lb'|'kg'; loadMode?:LoadMode; progressionDirection?:ProgressionDirection; weight?:number; reps?:number; load?:number; distance?:number; distanceUnit?:DistanceUnit; laps?:number; durationSeconds?:number; notes?:string }
 export type WorkoutExercise = { key:string; exercise:Exercise|null; sets:StrengthSet[] }
+// durationSeconds is hidden historical metadata retained only for RPC round-tripping.
 export type WorkoutDraft = { id?:string; originalPerformedAt?:string; date:string; locationId:string|null; notes:string; durationSeconds?:number; exercises:WorkoutExercise[] }
 export type Location = { id:string; name:string; isDefault:boolean; archived:boolean }
 export type Workout = { id:string; performedAt:string; createdAt?:string; location:Location|null; notes:string|null; durationSeconds:number|null; sets:(StrengthSet & { exercise:Exercise })[] }

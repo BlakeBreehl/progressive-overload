@@ -1,7 +1,8 @@
+import { useUnsavedForm } from '../../lib/unsavedNavigation';
 import { cardioEditDraft, cardioEntryPayload, type Form } from './entryDraft';
 import { LocationSelect } from "../../components/LocationSelect";
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   cardioFields,
@@ -68,6 +69,8 @@ export function CardioFeature({
     [historySearch, setHistorySearch] = useState(""),
     [historyLocation, setHistoryLocation] = useState("all"),
     [historyPage, setHistoryPage] = useState(1);
+  useUnsavedForm(form,saving);
+  useUnsavedForm({activityName},false,editingActivity?.id??null);
   const [historyRevision,setHistoryRevision]=useState(0);
   const [historyTotal,setHistoryTotal]=useState(0),[historyLoading,setHistoryLoading]=useState(false),[debouncedSearch,setDebouncedSearch]=useState("");
   useEffect(()=>{const timer=setTimeout(()=>setDebouncedSearch(historySearch),250);return()=>clearTimeout(timer)},[historySearch]);
@@ -91,10 +94,8 @@ export function CardioFeature({
   useEffect(() => {
     queueMicrotask(() => void load());
   }, [load]);
-  useEffect(() => {
-    if (create)
-      queueMicrotask(() => setForm((current) => current ?? blank(locations)));
-  }, [create, locations]);
+  const createStarted=useRef(false);
+  useEffect(()=>{if(!create){createStarted.current=false;return;}if(loading||createStarted.current)return;createStarted.current=true;setForm(current=>current??blank(locations));},[create,loading,locations]);
   useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getCardioHistoryPage(client,userId,{page:historyPage,search:debouncedSearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none"}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setEntries(result.items)}).catch(()=>{if(active)setError("Cardio history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedSearch,historyLocation,loading,historyRevision]);
   const edit = (entry: CardioSession) => {
     setForm(cardioEditDraft(entry));

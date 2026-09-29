@@ -1,3 +1,4 @@
+import { useUnsavedForm } from '../../lib/unsavedNavigation';
 import {displayMiles} from "../../lib/distanceUnits";
 import {subscribePrivacyChange} from './privacy';
 import { useCallback,useEffect,useRef,useState } from 'react';
@@ -16,6 +17,7 @@ function GroupScreen({client,userId}:{client:SupabaseClient;userId:string}){
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[busy,setBusy]=useState(false),[revision,setRevision]=useState(0),[snapshot,setSnapshot]=useState<{key:string;data:GroupSummary}|null>(null);
  const [dialog,setDialog]=useState<{kind:string;memberId?:string;label?:string}|null>(null),[name,setName]=useState(''),[displayName,setDisplayName]=useState(''),[code,setCode]=useState(''),[consent,setConsent]=useState(false),[codeSnapshot,setCodeSnapshot]=useState<{groupId:string;code:string}|null>(null),[codeError,setCodeError]=useState(''),[notice,setNotice]=useState(''),[hidden,setHidden]=useState<string[]>([]);
  const [managementGroupId,setManagementGroupId]=useState('');
+ useUnsavedForm(dialog&&['create','join','rename'].includes(dialog.kind)?{name,displayName,code,consent}:null,busy);
  const creationRequest=useRef('');
  const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',groupId=selected||groups[0]?.id||'',key=`${userId}:${groupId}:${period}:${activity}:${revision}`,data=snapshot?.key===key?snapshot.data:null,owner=data?.members.some(member=>member.is_self&&member.role==='owner');
  const displayedCode=codeSnapshot?.groupId===groupId?codeSnapshot.code:'';

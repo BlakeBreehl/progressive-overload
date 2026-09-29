@@ -8,7 +8,7 @@ const compact=(source:string)=>source.replace(/\s+/g,'').replace(/"/g,"'")
 
 describe('create-entry rendering contract', () => {
   it.each([
-    ['strength', strength, 'Add Strength Workout'],
+    ['strength', strength, 'Log Lift'],
     ['cardio', cardio, 'Add Cardio Entry'],
     ['flexibility', flexibility, 'Add Stretch Entry'],
     ['weight', weight, 'Add Bodyweight Entry'],

@@ -31,14 +31,14 @@ try{
  await send('Emulation.setEmulatedMedia',{features:[{name:'display-mode',value:mode.includes('standalone')?'standalone':'browser'}]});
  for(const [width,height] of (process.env.FOCUSED_WIDTH?[[Number(process.env.FOCUSED_WIDTH),Number(process.env.FOCUSED_HEIGHT??844)]]:process.env.DESKTOP_ONLY?[[768,1024],[1280,900]]:process.env.FOCUSED_SINGLE?[[390,844]]:process.env.REQUIRED_WIDTHS?[[320,568],[375,812],[390,844],[430,932]]:[[320,568],[360,640],[375,667],[375,812],[390,844],[393,852],[412,915],[430,932],[667,375]])){
   await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<900});
-  await send('Page.navigate',{url:`http://127.0.0.1:5187/__focused-release?width=${width}&height=${height}&mobile=${process.env.MOBILE_REPAIR??"0"}&release21=${process.env.RELEASE21??"0"}&snapshot=${process.env.FOCUSED_SNAPSHOT??''}`});
+  await send('Page.navigate',{url:`${process.env.FIXTURE_URL??'http://127.0.0.1:5187/__focused-release'}?width=${width}&height=${height}&mobile=${process.env.MOBILE_REPAIR??"0"}&release21=${process.env.RELEASE21??"0"}&snapshot=${process.env.FOCUSED_SNAPSHOT??''}`});
   let result;
-  for(let i=0;i<500;i++){
+  for(let i=0;i<Number(process.env.FIXTURE_POLLS??500);i++){
    await wait(100);
    const value=await send('Runtime.evaluate',{expression:'document.getElementById("result")?.textContent',returnByValue:true});
    if(value.result?.value&&value.result.value!=='RUNNING'){result=JSON.parse(value.result.value);break;}
   }
-  if(!result)throw Error(`Fixture timed out at ${width}x${height}`);
+  if(!result){const diagnostic=await send("Runtime.evaluate",{expression:"document.body.innerText",returnByValue:true});throw Error(`Fixture timed out at ${width}x${height}: ${diagnostic.result?.value}`);}
   if(process.env.FOCUSED_SNAPSHOT){const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});const path=join(folder,'screen.png');await writeFile(path,Buffer.from(shot.data,'base64'));console.log('Screenshot: '+path);}
   results.push({mode,width,height,...result});console.log(JSON.stringify(results.at(-1)));
   if(result.error||result.failures?.length)process.exitCode=1;
