@@ -1,5 +1,5 @@
 import { useUnsavedForm } from '../../lib/unsavedNavigation';
-import { cardioEditDraft, cardioEntryPayload, type Form } from './entryDraft';
+import { cardioActivityChange, cardioEditDraft, cardioEntryPayload, type Form } from './entryDraft';
 import { LocationSelect } from "../../components/LocationSelect";
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -69,6 +69,7 @@ export function CardioFeature({
     [historySearch, setHistorySearch] = useState(""),
     [historyLocation, setHistoryLocation] = useState("all"),
     [historyPage, setHistoryPage] = useState(1);
+  const [pendingActivity,setPendingActivity]=useState<ReturnType<typeof cardioActivityChange>|null>(null);
   useUnsavedForm(form,saving);
   useUnsavedForm({activityName},false,editingActivity?.id??null);
   const [historyRevision,setHistoryRevision]=useState(0);
@@ -103,7 +104,7 @@ export function CardioFeature({
   const save = async () => {
     if (!form || saving) return;
     const activity = activities.find((a) => a.id === form.activityId),
-      errors = validateCardio({
+      errors = form.trackingMode==='steps' ? (activity ? [] : ['Choose an activity.']) : validateCardio({
         activityName: activity?.name ?? "",
         hours: form.h,
         minutes: form.m,
@@ -118,7 +119,7 @@ export function CardioFeature({
       setError(errors.join(" "));
       return;
     }
-    try {parseStepCount(form.steps);} catch(error) {setError((error as Error).message);return;}
+    try {if(form.trackingMode==='steps'&&parseStepCount(form.steps)===null)throw new Error('Enter a positive whole number of steps.');parseStepCount(form.steps);} catch(error) {setError((error as Error).message);return;}
     setSaving(true);
     try {
       const payload = cardioEntryPayload(form);
@@ -142,9 +143,10 @@ export function CardioFeature({
   };
   if (loading) return <div className="surface-card">Loading Cardio…</div>;
   const selected = activities.find((a) => a.id === form?.activityId),
+    isSteps = form?.trackingMode==='steps',
     fields = cardioFields(selected?.name ?? ""),
     historyResults = {items:entries,total:historyTotal,page:historyPage,pages:Math.max(1,Math.ceil(historyTotal/20)),start:historyTotal?(historyPage-1)*20+1:0,end:Math.min(historyPage*20,historyTotal)};
-  if(success&&!form){const activity=activities.find(item=>item.id===success.form.activityId);return <section className="mx-auto max-w-xl"><p className="eyebrow">CARDIO SAVED</p><h1 className="page-title">Entry saved.</h1><div className="surface-card mt-6"><strong>{activity?.name??"Cardio"}</strong><p className="mt-2 text-sm text-slate-600">{formatDuration(durationToSeconds(success.form.h,success.form.m,success.form.s))}</p>{success.form.steps!==""&&<p className="mt-2 text-sm">{Number(success.form.steps).toLocaleString()} steps</p>}</div><EntrySuccessActions onAnother={()=>{setSuccess(null);setForm(blank(locations))}} onEdit={()=>{setForm({...success.form,id:success.id})}} onDone={()=>setSuccess(null)}/></section>}
+  if(success&&!form){const activity=activities.find(item=>item.id===success.form.activityId);return <section className="mx-auto max-w-xl"><p className="eyebrow">CARDIO SAVED</p><h1 className="page-title">Entry saved.</h1><div className="surface-card mt-6"><strong>{activity?.name??"Cardio"}</strong>{success.form.trackingMode!=='steps'&&<p className="mt-2 text-sm text-slate-600">{formatDuration(durationToSeconds(success.form.h,success.form.m,success.form.s))}</p>}{success.form.steps!==""&&<p className="mt-2 text-sm">{Number(success.form.steps).toLocaleString()} steps</p>}</div><EntrySuccessActions onAnother={()=>{setSuccess(null);setForm(blank(locations))}} onEdit={()=>{setForm({...success.form,id:success.id})}} onHistory={()=>setSuccess(null)} labels={{done:"Done"}} onDone={()=>setSuccess(null)}/></section>}
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -188,22 +190,23 @@ export function CardioFeature({
           <div className="mt-4 grid items-start gap-4 md:grid-cols-2">
             <Combobox
               autoFocus
+              key={`${form.activityId}-${!!pendingActivity}`}
               label="Activity"
               placeholder="Choose activity"
               value={form.activityId}
               options={activities
                 .filter((activity) => !activity.archived)
                 .map((activity) => ({ value: activity.id, label: activity.name }))}
-              onChange={(activityId) => setForm(current=>current?{ ...current, activityId }:current)}
+              onChange={(activityId) => {const change=cardioActivityChange(form,activityId,activities.find(a=>a.id===activityId)?.tracking_mode??'timed');if(change.removed.length)setPendingActivity(change);else setForm(change.next);}}
             />
-            <DurationWheel
+            {!isSteps && <DurationWheel
               hours={form.h}
               minutes={form.m}
               seconds={form.s}
               onChange={(p) =>
                 setForm(current=>current?{ ...current, h: p.hours, m: p.minutes, s: p.seconds }:current)
               }
-            />
+            />}
             <label className="field-label">
               Date
               <input
@@ -224,8 +227,8 @@ export function CardioFeature({
               ]}
               onChange={(locationId) => setForm(current=>current?{ ...current, locationId }:current)}
             />
-            <label className="field-label">Steps<input className="field-input" type="text" inputMode="numeric" value={form.steps} aria-describedby="steps-help" onChange={event=>{const steps=event.target.value;setForm(current=>current?{...current,steps}:current)}}/><span id="steps-help" className="text-xs text-slate-500">Optional manual step count</span></label>
-            {(fields.distance || form.distance !== undefined) && (
+            {(isSteps||form.steps!=="") && <label className="field-label">Number of steps<input className="field-input" type="text" inputMode="numeric" required={isSteps} value={form.steps} aria-describedby="steps-help" onChange={event=>{const steps=event.target.value;setForm(current=>current?{...current,steps}:current)}}/><span id="steps-help" className="text-xs text-slate-500">{isSteps?'Required daily total. For duplicate dates, Progress uses the newest saved record.':'Previously recorded steps (preserved)'}</span></label>}
+            {!isSteps && (fields.distance || form.distance !== undefined) && (
               <>
                 <label className="field-label">
                   Distance
@@ -256,7 +259,7 @@ export function CardioFeature({
                 />
               </>
             )}
-            {(fields.speed || form.speed !== undefined) && (
+            {!isSteps && (fields.speed || form.speed !== undefined) && (
               <label className="field-label">
                 Speed
                 <input
@@ -277,7 +280,7 @@ export function CardioFeature({
                 />
               </label>
             )}
-            {(fields.incline || form.incline !== undefined) && (
+            {!isSteps && (fields.incline || form.incline !== undefined) && (
               <label className="field-label">
                 Incline
                 <input
@@ -298,7 +301,7 @@ export function CardioFeature({
                 />
               </label>
             )}
-            {(fields.difficulty || form.difficulty !== undefined) && (
+            {!isSteps && (fields.difficulty || form.difficulty !== undefined) && (
               <label className="field-label">
                 Difficulty / level (0–10)
                 <input
@@ -320,7 +323,7 @@ export function CardioFeature({
                 />
               </label>
             )}
-            {form.laps !== undefined && <label className="field-label">Recorded laps<input className="field-input" type="number" min="0" step="any" value={form.laps} onChange={event=>{const laps=event.target.value === "" ? undefined : Number(event.target.value);setForm(current=>current?{...current,laps}:current)}} /></label>}
+            {!isSteps && form.laps !== undefined && <label className="field-label">Recorded laps<input className="field-input" type="number" min="0" step="any" value={form.laps} onChange={event=>{const laps=event.target.value === "" ? undefined : Number(event.target.value);setForm(current=>current?{...current,laps}:current)}} /></label>}
             <label className="field-label md:col-span-2">
               Notes (optional)
               <textarea
@@ -350,6 +353,7 @@ export function CardioFeature({
           </div>
         </div>
       )}
+      <ConfirmDialog open={!!pendingActivity} title="Change activity?" description={`This removes: ${pendingActivity?.removed.join(', ')??''}. Your date, location, and notes will be kept.`} confirmLabel="Change Activity" destructive={false} onCancel={()=>setPendingActivity(null)} onConfirm={()=>{if(pendingActivity)setForm(pendingActivity.next);setPendingActivity(null)}}/>
       <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_.65fr]">
         <div>
           <h2 className="font-display text-xl font-bold text-ink">History</h2>
@@ -365,7 +369,7 @@ export function CardioFeature({
                     <strong className="text-ink">{entry.activityName}</strong>
                     <p className="text-xs text-slate-500">
                       {new Date(entry.performedAt).toLocaleDateString()} ·{" "}
-                      {formatDuration(entry.durationSeconds)} ·{" "}
+                      {entry.trackingMode==='steps'?entry.stepCount==null?'Steps unavailable':`${entry.stepCount.toLocaleString()} steps`:entry.durationSeconds==null?'Duration unavailable':formatDuration(entry.durationSeconds)} ·{" "}
                       {entry.locationName ?? "No location"}
                     </p>
                   </div>
@@ -382,7 +386,7 @@ export function CardioFeature({
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
-                  {entry.stepCount !== undefined && `${entry.stepCount.toLocaleString()} steps · `}
+                  {entry.trackingMode!=='steps' && entry.stepCount !== undefined && `${entry.stepCount.toLocaleString()} steps · `}
                   {entry.distance !== undefined &&
                     `${entry.distance} ${entry.distanceUnit} `}
                   {entry.speed !== undefined && `· Speed ${entry.speed} `}
@@ -460,7 +464,7 @@ export function CardioFeature({
             ))}
           </div>
         </div>
-      </div><ConfirmDialog open={!!deleteEntry} title="Delete this Cardio entry?" description="This permanently removes the selected Cardio entry and refreshes Progress totals." confirmLabel="Delete Entry" busy={saving} error={error} onCancel={()=>{setDeleteEntry(null);setError("")}} onConfirm={async()=>{if(!deleteEntry)return;setSaving(true);try{await deleteCardioSession(client,userId,deleteEntry.id);setDeleteEntry(null);await load()}catch{setError("Could not delete this Cardio entry. It is unchanged; try again.")}finally{setSaving(false)}}}>{deleteEntry&&<><strong>{deleteEntry.activityName}</strong><p>{new Date(deleteEntry.performedAt).toLocaleDateString()} · {formatDuration(deleteEntry.durationSeconds)}</p></>}</ConfirmDialog><ConfirmDialog open={!!deleteActivity} title="Delete this Cardio activity?" description="The activity can only be deleted when no Cardio entries use it." confirmLabel="Delete Activity" busy={saving} error={error} onCancel={()=>{setDeleteActivity(null);setError("")}} onConfirm={async()=>{if(!deleteActivity)return;setSaving(true);try{await deleteCardioActivity(client,userId,deleteActivity.id);setDeleteActivity(null);await load()}catch{setError("This activity is used by existing entries. Delete those entries before deleting the activity.")}finally{setSaving(false)}}}>{deleteActivity&&<strong>{deleteActivity.name}</strong>}</ConfirmDialog>
+      </div><ConfirmDialog open={!!deleteEntry} title="Delete this Cardio entry?" description="This permanently removes the selected Cardio entry and refreshes Progress totals." confirmLabel="Delete Entry" busy={saving} error={error} onCancel={()=>{setDeleteEntry(null);setError("")}} onConfirm={async()=>{if(!deleteEntry)return;setSaving(true);try{await deleteCardioSession(client,userId,deleteEntry.id);setDeleteEntry(null);await load()}catch{setError("Could not delete this Cardio entry. It is unchanged; try again.")}finally{setSaving(false)}}}>{deleteEntry&&<><strong>{deleteEntry.activityName}</strong><p>{new Date(deleteEntry.performedAt).toLocaleDateString()} · {deleteEntry.trackingMode==='steps'?deleteEntry.stepCount==null?'Steps unavailable':`${deleteEntry.stepCount.toLocaleString()} steps`:deleteEntry.durationSeconds==null?'Duration unavailable':formatDuration(deleteEntry.durationSeconds)}</p></>}</ConfirmDialog><ConfirmDialog open={!!deleteActivity} title="Delete this Cardio activity?" description="The activity can only be deleted when no Cardio entries use it." confirmLabel="Delete Activity" busy={saving} error={error} onCancel={()=>{setDeleteActivity(null);setError("")}} onConfirm={async()=>{if(!deleteActivity)return;setSaving(true);try{await deleteCardioActivity(client,userId,deleteActivity.id);setDeleteActivity(null);await load()}catch{setError("This activity is used by existing entries. Delete those entries before deleting the activity.")}finally{setSaving(false)}}}>{deleteActivity&&<strong>{deleteActivity.name}</strong>}</ConfirmDialog>
     </section>
   );
 }

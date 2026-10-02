@@ -25,3 +25,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local validation scratch output; intentional evidence belongs in docs/
+/.audit*
+/.browser*
+/.entry*
+/.test*
+/.*-results.*

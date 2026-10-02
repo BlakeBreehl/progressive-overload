@@ -65,3 +65,21 @@ button{touch-action:manipulation}
 .notes-chevron { display:inline-block; transition:transform 150ms ease; }
 .notes-chevron-open { transform:rotate(90deg); }
 @media (prefers-reduced-motion:reduce) { .notes-chevron { transition:none; } }
+
+.set-action-row { display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
+.set-action { min-height:44px; padding:.35rem .65rem; border:1px solid #d4d4d4; border-radius:.65rem; background:#fafafa; color:#333; font-size:.75rem; font-weight:600; }
+.set-action:hover { background:#eee; }
+.set-action:active { background:#ddd; transform:translateY(1px); }
+.set-action:focus-visible { outline:2px solid #111; outline-offset:2px; }
+.set-action:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.set-action-remove { color:#b91c1c; border-color:#fecaca; background:#fff7f7; }
+.set-action-remove:hover { background:#fee2e2; }
+.set-action-remove:active { background:#fecaca; }
+.exercise-log-subtitle { display:block; color:#737373; font-size:.75rem; line-height:1.5; white-space:normal; overflow-wrap:anywhere; }
+.picker-row-active { background:#f5f5f5; }
+.picker-row mark { background:#fee2e2; color:inherit; }
+
+/* Bound sticky exercise cells as well as the scrollable table itself. */
+.progress-table th:first-child { width:12rem; max-width:12rem; white-space:normal; overflow-wrap:anywhere; }
+.recharts-tooltip-wrapper > * { max-width:100%; }
+.content .overflow-x-auto { min-width:0; max-width:100%; contain:inline-size layout; }

@@ -321,7 +321,7 @@ export function WeightFeature({
       )}
       <div className="surface-card mt-5">
         <ChartControls settings={weightAxes} setSettings={setWeightAxes} unit={graphUnit} showRange={false}><Select label="Line Style" value={style} options={[{value:"straight",label:"Straight"},{value:"smooth",label:"Smooth"}]} onChange={value=>setStyle(value as LineStyle)} /></ChartControls>
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" minWidth={0} height={280}>
           <LineChart
             data={chart}
             margin={{ top: 10, right: 12, left: -15, bottom: 0 }}
@@ -330,7 +330,7 @@ export function WeightFeature({
             <TimeXAxis dates={chart.map(point=>point.date)} />
             <Legend />
             <YAxis type="number" ticks={!weightAxes.min&&!weightAxes.max?niceAxis(axisVisible.map(item=>item.weight),5).ticks:undefined} domain={weightDomain} unit={` ${graphUnit}`} tick={{ fontSize: 10 }} />
-            <Tooltip
+            <Tooltip position={{x:0,y:0}}
               labelFormatter={label=>fullLocalDateLabel(String(label))}
               formatter={(value, name, entry) => [
                 `${(() => {const reading=visible.find(row=>row.id===entry.payload.id);return reading?displayWeight(reading.weight,reading.unit,graphUnit):value;})()} ${graphUnit}`,
@@ -378,7 +378,7 @@ export function WeightFeature({
       <div className="mt-3 space-y-2">
         {historyLoading ? <div className="empty-card">Loading matching readings…</div> : historyResults.items.map((x) => (
           <div
-            className="flex items-center justify-between gap-2 border-b border-slate-200 py-2"
+            className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 py-2"
             key={x.id}
           >
             <div>

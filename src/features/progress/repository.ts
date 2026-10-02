@@ -1,10 +1,10 @@
 import type{SupabaseClient}from"@supabase/supabase-js";
 import{relationObject}from"../../lib/supabaseError";
-export type CardioProgressRow={id:string;performed_at:string;created_at?:string;duration_seconds:number;step_count?:number|null;distance:number|null;distance_unit:string|null;speed:number|null;incline:number|null;difficulty:number|null;activity:unknown;location:unknown;location_id:string|null};
+export type CardioProgressRow={id:string;performed_at:string;created_at?:string;updated_at?:string;tracking_mode?:'timed'|'steps';duration_seconds:number|null;step_count?:number|null;distance:number|null;distance_unit:string|null;speed:number|null;incline:number|null;difficulty:number|null;activity:unknown;location:unknown;location_id:string|null};
 export async function loadCardioProgressRows(client:SupabaseClient,userId:string){
  const rows:CardioProgressRow[]=[];
  for(let offset=0;;offset+=500){
-  const{data,error}=await client.from('cardio_sessions').select('id,performed_at,created_at,duration_seconds,step_count,distance,distance_unit,speed,incline,difficulty,location_id,activity:cardio_activities!cardio_activity_owned_fk(name),location:locations!cardio_location_owned_fk(name)').eq('user_id',userId).order('id').range(offset,offset+499);
+  const{data,error}=await client.from('cardio_sessions').select('id,tracking_mode,performed_at,created_at,updated_at,duration_seconds,step_count,distance,distance_unit,speed,incline,difficulty,location_id,activity:cardio_activities!cardio_activity_owned_fk(name,tracking_mode),location:locations!cardio_location_owned_fk(name)').eq('user_id',userId).order('id').range(offset,offset+499);
   if(error)throw error;rows.push(...(data??[]) as CardioProgressRow[]);if((data??[]).length<500)return rows;
  }
 }

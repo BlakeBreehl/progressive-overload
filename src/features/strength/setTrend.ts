@@ -8,12 +8,13 @@ const day=(value:string)=>value.length===10?value:localDateKey(value);
 const parse=(value:string)=>new Date(`${value.length===7?value+'-01':value}T12:00:00`);
 export function setBucket(value:string,aggregation:SetAggregation){return aggregation==='weekly'?mondayOf(day(value)):day(value).slice(0,7);}
 /** Count once per saved set, using the donut's primary-group classification.
- * Zero-fill only between measured buckets after date/location filtering.
+ * Omit entirely empty periods; emit one zero per absent group in active buckets.
  */
 export function setTrend(rows:StrengthProgressRow[],aggregation:SetAggregation,{start='',end='',location='',now=new Date()}={}){
  const buckets=new Map<string,{id:string;exercise:unknown}[]>(),seen=new Set<string>();
  for(const row of rows){
   if(row.tracking_type==='repetitions'&&!(row.reps!=null&&Number.isInteger(row.reps)&&row.reps>0))continue;
+  if(row.tracking_type==='distance' && !((row.distance!=null&&Number.isFinite(row.distance)&&row.distance>0&&row.distance_unit) || (row.laps!=null&&Number.isSafeInteger(row.laps)&&row.laps>0)))continue;
   const workout=relationObject<{performed_at:string;location:{id:string}|null}>(row.workout,'set trend workout');
   if(!row.id||seen.has(row.id)||!workout||!Number.isFinite(parse(day(workout.performed_at)).getTime()))continue;
   const date=day(workout.performed_at);
@@ -21,11 +22,9 @@ export function setTrend(rows:StrengthProgressRow[],aggregation:SetAggregation,{
   seen.add(row.id);const key=setBucket(date,aggregation);buckets.set(key,[...(buckets.get(key)??[]),{id:row.id,exercise:row.exercise}]);
  }
  const keys=[...buckets.keys()].sort((a,b)=>parse(a).getTime()-parse(b).getTime());if(!keys.length)return [];
- const result=[];let key=keys[0];const current=setBucket(localDateKey(now.toISOString()),aggregation);
- while(parse(key).getTime()<=parse(keys.at(-1)!).getTime()){
+ const current=setBucket(localDateKey(now.toISOString()),aggregation);
+ return keys.map(key=>{
   const counts=countSetGroups(buckets.get(key)??[]);
-  result.push({date:key,partial:key===current,total:counts.total,...Object.fromEntries(counts.groups.map(group=>[group.name,group.value]))});
-  const next=parse(key);if(aggregation==='weekly')next.setDate(next.getDate()+7);else next.setMonth(next.getMonth()+1);key=setBucket(localDateKey(next.toISOString()),aggregation);
- }
- return result;
+  return {date:key,partial:key===current,total:counts.total,...Object.fromEntries(counts.groups.map(group=>[group.name,group.value]))};
+ });
 }

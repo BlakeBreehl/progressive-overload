@@ -1,0 +1,61 @@
+{
+  "filesScanned": 272,
+  "findings": {
+    "nativeDialogs": [],
+    "nativeSelects": [],
+    "credentialPatterns": [],
+    "malformed013": []
+  },
+  "earlierMigrations": [
+    {
+      "file": "supabase/migrations/202608300001_progressive_overload_foundation.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202608300002_strength_whole_reps.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202608300003_private_starter_exercises.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202608300004_activity_modules.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202608310005_private_stretches_and_sets.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202608310006_workbook_import.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202609010007_strength_load_modes_and_catalog.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202609140008_release_announcements.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202609140009_private_groups_and_leaderboards.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202609150010_short_group_codes_and_progress_privacy.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202609220011_cardio_steps_and_assisted_progression.sql",
+      "unchanged": true
+    },
+    {
+      "file": "supabase/migrations/202609290012_zero_rep_attempts.sql",
+      "unchanged": true
+    }
+  ],
+  "migration013Sha256": "0d2043a456c9d41da1a8dc53c81491d7e19ec3ac7f63460d7fb1bdd825e3303b",
+  "environmentFilesTracked": ""
+}

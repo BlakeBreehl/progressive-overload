@@ -49,10 +49,11 @@ type HistoricalRow = {
   exercise: unknown;
 };
 type CardioRow = {
+  updated_at?:string;tracking_mode?:'timed'|'steps';
   id: string;
   performed_at: string;
   created_at?: string;
-  duration_seconds: number;
+  duration_seconds: number|null;
   step_count?:number|null;
   distance: number | null;
   distance_unit: string | null;
@@ -367,7 +368,7 @@ export function StrengthProgress({
                 <CartesianGrid stroke="#e5e5e5" strokeDasharray="3 3" />
                 <TimeXAxis dates={chart.map(point=>point.date)} values={chart.map(point=>point.id)} dataKey="id" />
                 <YAxis ticks={!axes.min&&!axes.max?metricAxis(values,metric).ticks:undefined} tickFormatter={value=>formatMetric(Number(value),metric)} allowDecimals={chartUnit!=="reps"} domain={strengthDomain} unit={` ${chartUnit}`} />
-                <Tooltip active={!!activePoint} content={()=><StrengthTooltip active={!!activePoint} unit={chartUnit} payload={activePoint?[{name:lineLabel,value:activePoint.result,payload:activePoint}]:[]}/>} />
+                <Tooltip active={!!activePoint} position={{x:0,y:0}} content={()=><StrengthTooltip active={!!activePoint} unit={chartUnit} payload={activePoint?[{name:lineLabel,value:activePoint.result,payload:activePoint}]:[]}/>} />
                 <Legend />
                 <Line
                   dataKey="result"
@@ -384,7 +385,7 @@ export function StrengthProgress({
         </div>
       </div>
       {activePoint&&<div role="status" aria-live="polite"><StrengthTooltip active unit={chartUnit} payload={[{name:lineLabel,value:activePoint.result,payload:activePoint}]}/><button className="text-button" onClick={()=>setActiveSet(null)}>Close set details</button></div>}
-      <SetsByMuscleGroup rows={rows} start={axisDates.start} end={axisDates.end} location={location}/>
+      <SetsByMuscleGroup lineStyle={lineStyle} rows={rows} start={axisDates.start} end={axisDates.end} location={location}/>
       <StrengthTable
         unit={unit}
         title="Monthly — last 12 calendar months"
@@ -405,6 +406,7 @@ export function StrengthProgress({
 }
 
 type CardioPoint = {
+  activityKey:string;
   id:string;
   performed_at:string;
   created_at?:string;
@@ -414,6 +416,8 @@ type CardioPoint = {
   locationId: string;
   duration: number;
   steps?:number;
+  trackingMode?:'timed'|'steps';
+  updated_at?:string;
   distance?: number;
   unit?: string;
   speed?: number;
@@ -436,15 +440,16 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
         metrics = runningMetrics(
           row.distance ?? undefined,
           row.distance_unit ?? undefined,
-          row.duration_seconds,
+          row.duration_seconds??undefined,
         );
       return {
-        id:row.id,performed_at:row.performed_at,created_at:row.created_at,
+        activityKey: `${name}:${row.tracking_mode ?? 'timed'}`,
+        id:row.id,performed_at:row.performed_at,created_at:row.created_at,updated_at:row.updated_at,trackingMode:row.tracking_mode??'timed',
         date: date(row.performed_at),
         name,
         location,
         locationId: row.location_id ?? "",
-        duration: row.duration_seconds,
+        duration: row.duration_seconds??0,
         steps:row.step_count??undefined,
         distance: distanceMiles(row.distance,row.distance_unit) ?? undefined,
         unit: "mi",
@@ -454,22 +459,24 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
         difficulty: row.difficulty ?? undefined,
       };
     }),
-    names = [...new Set(points.map((point) => point.name))].sort(),
+    activities = [...new Map(points.map(point => [point.activityKey, {value:point.activityKey,label:point.name+(points.some(other=>other.name===point.name&&other.trackingMode!==point.trackingMode)?point.trackingMode==='steps'?' (Steps)':' (Timed)':'')}])).values()].sort((a,b)=>a.label.localeCompare(b.label)),
     [selected, setSelected] = useState(""),
     [axes, setAxes] = useState(defaultAxisSettings),
     [location, setLocation] = useState(""),
-    cardioDates=rangeDates(axes),activity = selected || names[0] || "",
+    cardioDates=rangeDates(axes),activity = activities.some(option=>option.value===selected)?selected:points.find(point=>point.trackingMode==='steps')?.activityKey || activities[0]?.value || "",
     locations = [...new Map(points.filter((point) => point.locationId).map((point) => [point.locationId, point.location!])).entries()],
     visible = orderPerformed(points.filter(
-      (point) => point.name === activity && within(point.date, cardioDates.start, cardioDates.end) && (!location || (location === "__none__" ? !point.locationId : point.locationId === location)),
+      (point) => point.activityKey === activity && within(point.date, cardioDates.start, cardioDates.end) && (!location || (location === "__none__" ? !point.locationId : point.locationId === location)),
     )),
-    chart = visible.map((point) => ({
+    timedVisible = visible.filter(point=>point.trackingMode==='timed'),
+    chart = timedVisible.map((point) => ({
       ...point,
       durationMinutes: point.duration / 60,
       paceMinutes: point.pace ? point.pace / 60 : undefined,
     })),
-    weekly = aggregateCardio(visible, "week"),
-    monthly = aggregateCardio(visible, "month"),metricValues=chart.flatMap(point=>point[metric]===undefined?[]:[point[metric]!]),cardioDomain=paddedDomain(metricValues,axes);
+    weekly = aggregateCardio(timedVisible, "week"),
+    monthly = aggregateCardio(timedVisible, "month"),metricValues=chart.flatMap(point=>point[metric]===undefined?[]:[point[metric]!]),cardioDomain=paddedDomain(metricValues,axes);
+  const isSteps=points.some(point=>point.activityKey===activity&&point.trackingMode==='steps');
   const table = (title: string, items: ReturnType<typeof aggregateCardio>) => (
     <div className="surface-card overflow-x-auto" role="region" aria-label={`${title}; scroll horizontally for all columns`} tabIndex={0}>
       <h3 className="font-display font-bold text-ink">{title}</h3>
@@ -509,16 +516,16 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
         <Combobox
           label="Activity"
           value={activity}
-          options={names.map((name) => ({ value: name, label: name }))}
-          onChange={setSelected}
+          options={activities}
+          onChange={value=>{setSelected(value);setMetric("duration")}}
         />
-        <Combobox label="Metric" value={metric} options={[{value:"duration",label:"Duration"},{value:"distance",label:"Distance"},{value:"speed",label:"Average speed"},{value:"pace",label:"Average pace"},{value:"steps",label:"Steps"}]} onChange={value=>setMetric(value as typeof metric)} />
-        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={metric==="steps"?"steps":metric==="duration"?"seconds":metric==="pace"?"seconds/mile":metric==="speed"?"mph":"miles"}/></div>
+        <Combobox label="Metric" value={isSteps?"steps":metric} options={isSteps?[{value:"steps",label:"Daily steps"}]:[{value:"duration",label:"Duration"},{value:"distance",label:"Distance"},{value:"speed",label:"Average speed"},{value:"pace",label:"Average pace"}]} onChange={value=>setMetric(value as typeof metric)} />
+        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={isSteps?"steps":metric==="duration"?"seconds":metric==="pace"?"seconds/mile":metric==="speed"?"mph":"miles"}/></div>
         <Combobox label="Location" value={location} options={[{ value: "", label: "All locations" }, { value: "__none__", label: "No location" }, ...locations.map(([id, name]) => ({ value: id, label: name }))]} onChange={setLocation} />
       </div>
-      {metric==="steps"?<StepsProgress entries={visible} axes={axes}/>:<div className="surface-card">
+      {isSteps?<StepsProgress entries={visible.filter(point=>point.trackingMode==='steps')} axes={axes}/>:<div className="surface-card">
         <h2 className="font-display text-lg font-bold text-ink">
-          {activity} Progress
+          {activities.find(option=>option.value===activity)?.label} Progress
         </h2>
         <div className="mt-3 h-80">
           {chart.length ? (
@@ -527,7 +534,7 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
                 <CartesianGrid stroke="#e5e5e5" />
                 <TimeXAxis dates={chart.map(point=>point.date)} />
                 <YAxis domain={cardioDomain} ticks={!axes.min&&!axes.max?metricAxis(metricValues,metric).ticks:undefined} tickFormatter={value=>formatMetric(Number(value),metric)} />
-                <Tooltip
+                <Tooltip position={{x:0,y:0}}
                   content={({ active, payload, label }) =>
                     active && payload?.length ? (
                       <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-xl">
@@ -573,8 +580,8 @@ export function CardioProgress({ rows }: { rows: CardioRow[] }) {
         </div>
       </div>
       }
-      {table("Weekly totals", weekly)}
-      {table("Monthly totals", monthly)}
+      {!isSteps&&table("Weekly totals", weekly)}
+      {!isSteps&&table("Monthly totals", monthly)}
     </div>
   );
 }
@@ -658,7 +665,7 @@ export function FlexProgress({ rows }: { rows: FlexRow[] }) {
                   <CartesianGrid stroke="#e5e5e5" />
                   <TimeXAxis dates={(items as typeof visible).map(item=>item.date)} />
                   <YAxis tickFormatter={value=>formatMetric(Number(value),kind==="time"?"duration":"reps")} allowDecimals={kind!=="reps"} domain={paddedDomain((items as typeof visible).map(item=>kind==="time"?item.time:item.reps),kind==="time"?timeAxes:repAxes)} />
-                  <Tooltip labelFormatter={label=>fullLocalDateLabel(String(label))}/>
+                  <Tooltip position={{x:0,y:0}} labelFormatter={label=>fullLocalDateLabel(String(label))}/>
                   <Legend />
                   <Line
                     dataKey={kind === "time" ? "time" : "reps"}

@@ -1,0 +1,126 @@
+{
+  "unitTests": {
+    "files": 93,
+    "total": 565,
+    "passed": 565,
+    "failed": 0
+  },
+  "browser": [
+    {
+      "mode": "chromium",
+      "width": 320,
+      "height": 568,
+      "checks": 38,
+      "failures": [],
+      "errors": [],
+      "requests": 31
+    },
+    {
+      "mode": "chromium",
+      "width": 375,
+      "height": 812,
+      "checks": 38,
+      "failures": [],
+      "errors": [],
+      "requests": 31
+    },
+    {
+      "mode": "chromium",
+      "width": 390,
+      "height": 844,
+      "checks": 38,
+      "failures": [],
+      "errors": [],
+      "requests": 31
+    },
+    {
+      "mode": "chromium",
+      "width": 430,
+      "height": 932,
+      "checks": 38,
+      "failures": [],
+      "errors": [],
+      "requests": 31
+    },
+    {
+      "mode": "chromium",
+      "width": 768,
+      "height": 1024,
+      "checks": 38,
+      "failures": [],
+      "errors": [],
+      "requests": 31
+    },
+    {
+      "mode": "chromium",
+      "width": 1280,
+      "height": 900,
+      "checks": 38,
+      "failures": [],
+      "errors": [],
+      "requests": 31
+    }
+  ],
+  "lint": "0 errors, 0 warnings",
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "dependencyAudit": {
+    "totalVulnerabilities": 0,
+    "source": "npm audit --json; read-only network retry succeeded"
+  },
+  "sqlExecuted": false,
+  "supabaseConnected": false,
+  "pushed": false,
+  "deployed": false,
+  "migration013Applied": false,
+  "earlierMigrations": [
+    {
+      "file": "supabase/migrations/202608300001_progressive_overload_foundation.sql",
+      "sha256": "69eee5b5544a9568bc959f0b2f13f5bed00de07ea0f5604f5993f27af95ce26c"
+    },
+    {
+      "file": "supabase/migrations/202608300002_strength_whole_reps.sql",
+      "sha256": "5965aba0e3957fb7cf0fa4a140f51bf6117d6ee1aa1bff4040cc275487d464f5"
+    },
+    {
+      "file": "supabase/migrations/202608300003_private_starter_exercises.sql",
+      "sha256": "b0e2cdc1170a9e7ef25e66378c14b10c0944b3b9a1a8c69e7b7b848bc8117165"
+    },
+    {
+      "file": "supabase/migrations/202608300004_activity_modules.sql",
+      "sha256": "d53d23335d77211643340b2fc1a2f5742f6664461b3705d2e3dac76d881f0a80"
+    },
+    {
+      "file": "supabase/migrations/202608310005_private_stretches_and_sets.sql",
+      "sha256": "0f4fa78c197712e13d645d1169b23b8b2dd45513b9275612a96748fa08f0247a"
+    },
+    {
+      "file": "supabase/migrations/202608310006_workbook_import.sql",
+      "sha256": "441c36de20a80eb698ebf3fd0092197ccc85d0c0ad098030f9c2583ba4ff5b1a"
+    },
+    {
+      "file": "supabase/migrations/202609010007_strength_load_modes_and_catalog.sql",
+      "sha256": "4e5958416b0d948b82884780f8cdf1769c2810f60a498fbe762509cf1b208465"
+    },
+    {
+      "file": "supabase/migrations/202609140008_release_announcements.sql",
+      "sha256": "bf102ec310ffedc303a9b8b9194c3006c70e434c7dc34047c60f39ebda18be51"
+    },
+    {
+      "file": "supabase/migrations/202609140009_private_groups_and_leaderboards.sql",
+      "sha256": "51e12a933b512fbf6e3c62ccc7ffdfacb68bfae5f5ccae4be5aa2c1ffd627468"
+    },
+    {
+      "file": "supabase/migrations/202609150010_short_group_codes_and_progress_privacy.sql",
+      "sha256": "8f6e87790aec33c1b605bbb21705ce9a3cf25a9ed793b5f3cc5b91024d3ade06"
+    },
+    {
+      "file": "supabase/migrations/202609220011_cardio_steps_and_assisted_progression.sql",
+      "sha256": "d7ffb55ef79b17eb821f92aab3e80984fc9ea314911e17ed61551197a1b17c8e"
+    },
+    {
+      "file": "supabase/migrations/202609290012_zero_rep_attempts.sql",
+      "sha256": "582c9ba56ddfcf468aab391e6fc40e4e097fb96960355f4e9494ac3f59f1e635"
+    }
+  ]
+}

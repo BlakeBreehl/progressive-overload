@@ -9,7 +9,7 @@ describe("duration wheel integration", () => {
   it("is used for Cardio create and edit state", () => {
     expect(cardioRaw).toContain("<DurationWheel");
     expect(cardioRaw).toContain("cardioEditDraft(entry)");
-    expect(draftRaw).toContain("durationParts(entry.durationSeconds)");
+    expect(draftRaw).toContain("durationParts(entry.durationSeconds??0)");
   });
   it("keeps Cardio as HH:MM:SS", () => {
     expect(wheel).toContain('{ label: "Hours"');

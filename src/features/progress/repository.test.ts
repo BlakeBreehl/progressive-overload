@@ -7,7 +7,7 @@ it('loads steps beyond the default server row cap, retaining nullable values and
  const result=await loadCardioProgressRows({from:()=>q} as never,'account-a');
  expect(result).toHaveLength(1201);expect(range.mock.calls).toEqual([[0,499],[500,999],[1000,1499]]);expect(eq).toHaveBeenCalledWith('user_id','account-a');expect(order).toHaveBeenCalledWith('id');
  expect(select.mock.calls[0][0]).toContain('!cardio_activity_owned_fk');expect(select.mock.calls[0][0]).toContain('!cardio_location_owned_fk');
- expect(stepProgress(result.map(r=>({date:r.performed_at,steps:r.step_count})),'daily')).toMatchObject({count:601,total:60100,average:100});
+ expect(stepProgress(result.map(r=>({date:r.performed_at,steps:r.step_count})),'daily')).toMatchObject({count:1,total:100,average:100});
 });
 it('does not publish partial totals if a later page fails',async()=>{
  let count=0;const q={select:()=>q,eq:()=>q,order:()=>q,range:async()=>++count===1?{data:Array(500).fill({id:'fixture'}),error:null}:{data:null,error:{code:'42501'}}};

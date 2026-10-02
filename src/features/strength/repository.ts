@@ -1,4 +1,4 @@
-import { convertWeight } from "../../lib/weightUnits";
+import { summarizeExercises, type ExerciseSummaryRow } from './exerciseSummary';
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { localDateKey, localDateToIso, orderedSets } from './logic'
 import type { Exercise, Location, MuscleGroup, StrengthSet, TrackingType, Workout, WorkoutDraft } from './types'
@@ -8,16 +8,29 @@ import { historyRange, searchPattern, type HistoryFilters, type HistoryPage } fr
 type ExerciseRow={id:string;user_id:string;name:string;tracking_type:TrackingType;load_mode?:'weight_reps'|'reps_only';progression_direction?:'higher_is_better'|'lower_is_better';major_muscle_group:MuscleGroup;is_compound:boolean;archived:boolean;created_at:string;updated_at:string}
 type AssignmentRow={exercise_id:string;muscle_tag:string}
 type GroupAssignmentRow={exercise_id:string;major_group:MuscleGroup}
-export async function getExercises(client:SupabaseClient,userId:string):Promise<Exercise[]>{
+export async function getExercises(client:SupabaseClient,userId:string,summaryRows?:ExerciseSummaryRow[]):Promise<Exercise[]>{
   const [{data:rows,error},{data:tags,error:tagError},{data:groups,error:groupError}]=await Promise.all([
     client.from('exercises').select('*').eq('user_id',userId).order('name'),
     client.from('exercise_muscle_assignments').select('exercise_id,muscle_tag').eq('user_id',userId),
     client.from('exercise_group_assignments').select('exercise_id,major_group').eq('user_id',userId),
   ]);if(error){safeSupabaseDiagnostic('Strength','load exercises',error);throw error}if(tagError){safeSupabaseDiagnostic('Strength','load muscle assignments',tagError);throw tagError}if(groupError){safeSupabaseDiagnostic('Strength','load group assignments',groupError);throw groupError}
-  const uses:Array<{exercise_id:string;weight:number|null;weight_unit?:'lb'|'kg';reps:number|null;workout:unknown}>=[];
-  for(let offset=0;;offset+=500){const{data,error:useError}=await client.from('strength_sets').select('exercise_id,weight,weight_unit,reps,workout:strength_workouts!strength_set_workout_owned_fk(performed_at)').eq('user_id',userId).order('id').range(offset,offset+499);if(useError){safeSupabaseDiagnostic('Strength','load optional exercise usage',useError);break;}uses.push(...(data??[]));if((data??[]).length<500)break;}
-  const assignments=(tags??[]) as AssignmentRow[],groupAssignments=(groups??[]) as GroupAssignmentRow[];const usage=new Map<string,{count:number;recent:string|null;pr?:number;lastWeight?:number;lastReps?:number}>();for(const raw of (uses??[]) as {exercise_id:string;weight:number|null;weight_unit?:"lb"|"kg";reps:number|null;workout:unknown}[]){if(((rows??[]) as ExerciseRow[]).find(exercise=>exercise.id===raw.exercise_id)?.tracking_type==='repetitions'&&!(raw.reps!=null&&Number.isInteger(raw.reps)&&raw.reps>0))continue;const row={...raw,weight:raw.weight===null?null:convertWeight(Number(raw.weight),raw.weight_unit??'lb','lb')};const workout=relationObject<{performed_at:string}>(row.workout,'strength_sets.workout');if(!workout)continue;const value=usage.get(row.exercise_id)??{count:0,recent:null};value.count++;const lower=((rows??[]) as ExerciseRow[]).find(exercise=>exercise.id===row.exercise_id)?.progression_direction==='lower_is_better';if(row.weight!=null)value.pr=lower?Math.min(value.pr??Infinity,row.weight):Math.max(value.pr??-Infinity,row.weight);const day=workout.performed_at.slice(0,10),recent=value.recent?.slice(0,10);if(!recent||day>recent||(day===recent&&row.weight!=null&&((lower?row.weight<(value.lastWeight??Infinity):row.weight>(value.lastWeight??-Infinity))||row.weight===value.lastWeight&&(row.reps??0)>(value.lastReps??0)))){value.recent=workout.performed_at;value.lastWeight=row.weight??undefined;value.lastReps=row.reps??undefined}usage.set(row.exercise_id,value)}
-  return ((rows??[]) as ExerciseRow[]).map(row=>{const assignedGroups=groupAssignments.filter(a=>a.exercise_id===row.id).map(a=>a.major_group),u=usage.get(row.id);return{id:row.id,userId:row.user_id,name:row.name,trackingType:row.tracking_type,loadMode:row.load_mode??'weight_reps',progressionDirection:row.progression_direction??'higher_is_better',majorMuscleGroups:[row.major_muscle_group,...assignedGroups.filter(group=>group!==row.major_muscle_group)],muscleTags:assignments.filter(a=>a.exercise_id===row.id).map(a=>a.muscle_tag),isCompound:row.is_compound,archived:row.archived,createdAt:row.created_at,updatedAt:row.updated_at,usageCount:u?.count??0,lastUsedAt:u?.recent??null,prWeight:u?.pr,lastWeight:u?.lastWeight,lastReps:u?.lastReps}})
+  const assignments=(tags??[]) as AssignmentRow[],groupAssignments=(groups??[]) as GroupAssignmentRow[];
+  const definitions:Exercise[]=((rows??[]) as ExerciseRow[]).map(row=>{const assignedGroups=groupAssignments.filter(a=>a.exercise_id===row.id).map(a=>a.major_group);return{id:row.id,userId:row.user_id,name:row.name,trackingType:row.tracking_type,loadMode:row.load_mode??'weight_reps',progressionDirection:row.progression_direction??'higher_is_better',majorMuscleGroups:[row.major_muscle_group,...assignedGroups.filter(group=>group!==row.major_muscle_group)],muscleTags:assignments.filter(a=>a.exercise_id===row.id).map(a=>a.muscle_tag),isCompound:row.is_compound,archived:row.archived,createdAt:row.created_at,updatedAt:row.updated_at,usageCount:0,lastUsedAt:null}});
+  if(summaryRows)return summarizeExercises(definitions,summaryRows);
+  // Standalone callers can load narrow evidence; the entry feature reuses its PR query instead.
+  try {
+    const uses:ExerciseSummaryRow[]=[];
+    for(let offset=0;;offset+=500){
+      const {data,error:useError}=await client.from('strength_sets').select('id,exercise_id,set_order,weight,weight_unit,reps,load,distance,distance_unit,laps,duration_seconds,workout:strength_workouts!strength_set_workout_owned_fk(id,performed_at,created_at)').eq('user_id',userId).order('id').range(offset,offset+499);
+      if(useError)throw useError;
+      uses.push(...(data??[]) as ExerciseSummaryRow[]);
+      if((data??[]).length<500)break;
+    }
+    return summarizeExercises(definitions,uses);
+  } catch(error) {
+    safeSupabaseDiagnostic('Strength','load optional exercise summaries',error);
+    return definitions.map(exercise=>({...exercise,logSummary:{state:'unavailable',attempts:0}}));
+  }
 }
 export type ExerciseInput={name:string;trackingType:TrackingType;loadMode:'weight_reps'|'reps_only';progressionDirection?:'higher_is_better'|'lower_is_better';majorMuscleGroups:MuscleGroup[];muscleTags:string[];isCompound:boolean}
 export async function saveExercise(client:SupabaseClient,userId:string,input:ExerciseInput,id?:string){const{data,error}=await client.rpc('save_strength_exercise',{p_exercise:{id:id??null,user_id:userId,name:input.name.trim().replace(/\s+/g,' '),tracking_type:input.trackingType,load_mode:input.trackingType==='distance'?'weight_reps':input.loadMode,progression_direction:input.progressionDirection??'higher_is_better',major_muscle_group:input.majorMuscleGroups[0],major_muscle_groups:input.majorMuscleGroups,is_compound:input.isCompound},p_muscle_tags:input.muscleTags});if(error)throw error;return data as string}

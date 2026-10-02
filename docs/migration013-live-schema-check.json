@@ -1,0 +1,20 @@
+{
+  "readOnly": true,
+  "authenticated": false,
+  "results": [
+    {
+      "table": "cardio_activities",
+      "status": 400,
+      "code": "42703",
+      "trackingModeAvailable": false,
+      "noRecordsRequested": true
+    },
+    {
+      "table": "cardio_sessions",
+      "status": 400,
+      "code": "42703",
+      "trackingModeAvailable": false,
+      "noRecordsRequested": true
+    }
+  ]
+}

@@ -7,7 +7,7 @@ const entry: CardioSession = {id:'existing-cardio',activityId:'running',activity
 it.each(['treadmill','stairmaster','running'])('preserves all recorded Cardio metrics when selecting %s', activityId => {
   const draft=cardioEditDraft(entry), changed={...draft,activityId}
   expect(changed).toEqual({...draft,activityId})
-  expect(cardioEntryPayload(changed)).toEqual({activity_id:activityId,step_count:12345,performed_at:entry.performedAt,duration_seconds:3723,distance:3.4,distance_unit:'miles',speed:5.6,laps:4,incline:2,difficulty:7,notes:entry.notes,location_id:null})
+  expect(cardioEntryPayload(changed)).toEqual({tracking_mode:'timed',activity_id:activityId,step_count:12345,performed_at:entry.performedAt,duration_seconds:3723,distance:3.4,distance_unit:'miles',speed:5.6,laps:4,incline:2,difficulty:7,notes:entry.notes,location_id:null})
 })
 it('updates the exact existing record once, leaves creation chronology alone and retains draft on failure', async () => {
   const draft={...cardioEditDraft(entry),activityId:'stairmaster'}, before=structuredClone(draft)

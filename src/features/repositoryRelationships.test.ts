@@ -13,7 +13,7 @@ const fakeClient=(responses:Record<string,{data:unknown[]|null;error:unknown}>)=
 
 describe('unambiguous PostgREST relationship queries',()=>{
 it('uses every applicable composite ownership constraint',()=>{for(const hint of['strength_set_workout_owned_fk','strength_workout_location_owned_fk','strength_set_exercise_type_owned_fk'])expect(strengthSource).toContain(`!${hint}`);for(const hint of['cardio_activity_owned_fk','cardio_location_owned_fk'])expect(cardioSource).toContain(`!${hint}`);expect(flexibilitySource).toContain('!mobility_activity_owned_fk');expect(progressSource+progressRepositorySource).toContain('!strength_set_exercise_type_owned_fk');expect(progressSource+progressRepositorySource).toContain('!cardio_activity_owned_fk');expect(progressSource).toContain('!mobility_activity_owned_fk')})
-  it('loads primary catalogs independently from paged histories',()=>{expect(strengthSource).toContain("load optional exercise usage");expect(strengthSource).not.toContain('if(useError)throw');expect(cardioSource).toContain('sessions:[] as CardioSession[]');expect(flexibilitySource).toContain('entries:[]as FlexEntry[]');expect(cardioSource).toContain('getCardioHistoryPage');expect(flexibilitySource).toContain('getFlexHistoryPage')})
+  it('loads primary catalogs independently from paged histories',()=>{expect(strengthSource).toContain("load optional exercise summaries");expect(strengthSource).toContain("logSummary:{state:'unavailable'");expect(cardioSource).toContain('sessions:[] as CardioSession[]');expect(flexibilitySource).toContain('entries:[]as FlexEntry[]');expect(cardioSource).toContain('getCardioHistoryPage');expect(flexibilitySource).toContain('getFlexHistoryPage')})
 })
 
 describe('repository response parsing',()=>{

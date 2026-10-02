@@ -1,4 +1,6 @@
 import { CollapsibleNotes } from '../../components/CollapsibleNotes';
+import { exerciseLogSubtitle } from './searchMetadata';
+import { summarizeExercises } from './exerciseSummary';
 import { useUnsavedForm } from '../../lib/unsavedNavigation';
 import { changeExercise, exerciseChangeWarning, workoutEditDraft } from './exerciseChange';
 import { displayWeight, type WeightUnit } from "../../lib/weightUnits";
@@ -6,7 +8,7 @@ import { YourSets } from "./YourSets";
 import { LocationSelect } from "../../components/LocationSelect";
 import { loadStrengthProgressRows, strengthPrEvidence } from "../progress/repository";
 /* oxlint-disable react/set-state-in-effect -- loading state follows remote requests */
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   detectRepetitionPrs,
@@ -143,18 +145,27 @@ function SetText({ set, unit }: { set: StrengthSet; unit: string }) {
   );
 }
 
+function highlightExercise(name:string,query:string){
+  const index=name.toLowerCase().indexOf(query.trim().toLowerCase());
+  if(index<0||!query.trim())return name;
+  return <>{name.slice(0,index)}<mark>{name.slice(index,index+query.trim().length)}</mark>{name.slice(index+query.trim().length)}</>;
+}
 function ExercisePicker({
   exercises,
+  unit,
   value,
   onPick,
   onCreate,
 }: {
   exercises: Exercise[];
+  unit: string;
   value: Exercise | null;
   onPick: (e: Exercise) => void;
   onCreate: (name: string) => void;
 }) {
   const [q, setQ] = useState<string | null>(null);
+  const listId = useId();
+  const [active, setActive] = useState(0);
   const [pending, setPending] = useState<Exercise | null>(null);
   const query = q ?? value?.name ?? "";
   const ref = useRef<HTMLInputElement>(null);
@@ -162,6 +173,11 @@ function ExercisePicker({
     0,
     8,
   );
+  const open = !!query.trim() && query !== value?.name;
+  const pick = (exercise: Exercise) => {
+    if (exerciseChangeWarning(value, exercise)) setPending(exercise);
+    else { onPick(exercise); setQ(null); }
+  };
   return (
     <div className="relative">
       <label className="field-label">
@@ -171,33 +187,36 @@ function ExercisePicker({
           className="field-input"
           value={query}
           placeholder="Search exercises…"
-          onChange={(e) => setQ(e.target.value)}
+          role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={listId}
+          aria-activedescendant={open && matches[active] ? `${listId}-${matches[active].id}` : undefined}
+          onChange={(e) => {setQ(e.target.value);setActive(0);}}
           onFocus={() => value && setQ("")}
+          onKeyDown={event=>{
+            if(!open)return;
+            if(event.key==='Escape'){event.preventDefault();setQ(null);}
+            if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();const next=Math.max(0,Math.min(matches.length-1,active+(event.key==='ArrowDown'?1:-1)));setActive(next);document.getElementById(`${listId}-${matches[next]?.id}`)?.scrollIntoView({block:'nearest'});}
+            if(event.key==='Enter'&&matches[active]){event.preventDefault();pick(matches[active]);}
+          }}
         />
       </label>
-      {query.trim() && query !== value?.name && (
+      {open && (
         <div className="picker-menu">
-          {matches.map((e) => (
+          <div id={listId} role="listbox" aria-label="Exercises">
+          {matches.map((e, index) => (
             <button
               key={e.id}
-              className="picker-row"
-              onClick={() => {
-                if (exerciseChangeWarning(value, e)) setPending(e);
-                else { onPick(e); setQ(null); }
-              }}
+              type="button" role="option" aria-selected={e.id===value?.id}
+              id={`${listId}-${e.id}`} aria-describedby={`${listId}-${e.id}-summary`}
+              className={`picker-row ${index===active?'picker-row-active':''}`}
+              onClick={() => pick(e)}
             >
-              <span className="min-w-0">
-                <strong className="block truncate text-ink">{e.name}</strong>
-                <small>
-                  {e.majorMuscleGroups.join(", ")} ·{" "}
-                  {e.trackingType === "repetitions"
-                    ? "Repetitions"
-                    : "Distance"}
-                </small>
+              <span className="min-w-0 flex-1">
+                <strong className="block truncate text-ink">{highlightExercise(e.name,query)}</strong>
+                <small id={`${listId}-${e.id}-summary`} className="exercise-log-subtitle">{exerciseLogSubtitle(e,unit)}</small>
               </span>
-              {e.isCompound && <span className="tag">Compound</span>}
             </button>
           ))}
+          </div>
           {!matches.length && (
             <p className="p-3 text-sm text-slate-500">
               No active exercises match “{query.trim()}”.
@@ -220,6 +239,8 @@ function SetRow({
   onChange,
   onRemove,
   onDuplicate,
+  busy,
+  canRemove,
 }: {
   set: StrengthSet;
   index: number;
@@ -227,19 +248,21 @@ function SetRow({
   onChange: (update:(set:StrengthSet)=>StrengthSet) => void;
   onRemove: () => void;
   onDuplicate: () => void;
+  busy: boolean;
+  canRemove: boolean;
 }) {
   const number = (key: keyof StrengthSet, value: string) =>
     onChange(current=>({ ...current, [key]: value === "" ? undefined : Number(value) }));
   return (
     <div className="set-card">
-      <div className="flex items-center justify-between">
+      <div className="set-action-row">
         <strong className="text-xs text-slate-400">SET {index + 1}</strong>
         <div className="flex gap-2">
-          <button className="text-button" onClick={onDuplicate}>
-            Duplicate
+          <button type="button" className="set-action" aria-label={`Duplicate set ${index + 1}`} disabled={busy} onClick={onDuplicate}>
+            <span aria-hidden="true">⧉</span> Duplicate
           </button>
-          <button className="text-button text-rose-300" onClick={onRemove}>
-            Remove
+          <button type="button" className="set-action set-action-remove" aria-label={`Remove set ${index + 1}`} disabled={busy || !canRemove} onClick={onRemove}>
+            <span aria-hidden="true">−</span> Remove
           </button>
         </div>
       </div>
@@ -410,6 +433,7 @@ function WorkoutForm({
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <ExercisePicker
+                  unit={unit}
                   exercises={exercises.filter((e) => !e.archived)}
                   value={block.exercise}
                   onCreate={onCreateExercise}
@@ -435,6 +459,8 @@ function WorkoutForm({
                     key={set.id ?? set.clientKey}
                     set={set}
                     index={si}
+                    busy={saving}
+                    canRemove={block.sets.length>1}
                     unit={set.weightUnit??(draft.id?"lb":unit)}
                     onChange={(update) =>
                       updateBlock(block.key, block=>({
@@ -445,11 +471,11 @@ function WorkoutForm({
                     onRemove={() =>
                       updateBlock(block.key, block=>({
                         ...block,
-                        sets: block.sets.filter(s => (s.id ?? s.clientKey) !== (set.id ?? set.clientKey)),
+                        sets: block.sets.length>1&&!saving ? block.sets.filter(s => (s.id ?? s.clientKey) !== (set.id ?? set.clientKey)) : block.sets,
                       }))
                     }
                     onDuplicate={() =>
-                      updateBlock(block.key, current => ({ ...current, sets: current.sets.flatMap(row =>
+                      !saving && updateBlock(block.key, current => ({ ...current, sets: current.sets.flatMap(row =>
                         (row.id ?? row.clientKey) === (set.id ?? set.clientKey)
                           ? [row, { ...row, id: undefined, clientKey: uid() }] : [row]) }))
                     }
@@ -1051,33 +1077,28 @@ export function StrengthFeature({
   const [historyItems,setHistoryItems]=useState<Workout[]>([]),[historyTotal,setHistoryTotal]=useState(0),[historyLoading,setHistoryLoading]=useState(false),[debouncedHistorySearch,setDebouncedHistorySearch]=useState("");
   useEffect(()=>{const timer=setTimeout(()=>setDebouncedHistorySearch(historySearch),250);return()=>clearTimeout(timer)},[historySearch]);
   const [evidence,setEvidence]=useState<ReturnType<typeof strengthPrEvidence>>([]);
+  const loadVersion = useRef(0);
   const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    const version=++loadVersion.current;
+    const current=()=>version===loadVersion.current;
+    setLoading(true);setError("");
     try {
-      setExercises(await getExercises(client, userId));
-      setEvidence(strengthPrEvidence(await loadStrengthProgressRows(client,userId)));
-      const [l, w] = await Promise.allSettled([
-        getLocations(client, userId),
-        getWorkouts(client, userId),
-      ]);
-      if (l.status === "fulfilled") setLocations(l.value);
-      else void l.reason;
-      if (w.status === "fulfilled") setWorkouts(w.value);
-      else void w.reason;
-      if ([l, w].some((result) => result.status === "rejected"))
-        setError(
-          "Exercises loaded, but some history or location details are temporarily unavailable.",
-        );
-    } catch (e) {
-      setError(strengthLoadMessage(e));
-    } finally {
+      const definitions=await getExercises(client,userId,[]);
+      if(!current())return;
+      setExercises(definitions.map(exercise=>({...exercise,logSummary:{state:'loading',attempts:0}})));
       setLoading(false);
-    }
-  }, [client, userId]);
-  useEffect(() => {
-    queueMicrotask(() => void load());
-  }, [load]);
+      await Promise.all([
+        loadStrengthProgressRows(client,userId).then(rows=>{
+          if(!current())return;
+          setExercises(summarizeExercises(definitions,rows));setEvidence(strengthPrEvidence(rows));
+        }).catch(()=>{if(current()){setEvidence([]);setExercises(definitions.map(exercise=>({...exercise,logSummary:{state:'unavailable',attempts:0}})));}}),
+        getLocations(client,userId).then(rows=>{if(current())setLocations(rows)}).catch(()=>{if(current())setError('Locations temporarily unavailable.')}),
+        getWorkouts(client,userId).then(rows=>{if(current())setWorkouts(rows)}).catch(()=>{if(current())setError('Recent history temporarily unavailable.')}),
+      ]);
+    } catch(error) {if(current())setError(strengthLoadMessage(error));}
+    finally {if(current())setLoading(false);}
+  }, [client,userId]);
+  useEffect(()=>{const version=loadVersion;void load();return()=>{version.current++}},[load]);
   useEffect(()=>{if(loading)return;let active=true;setHistoryLoading(true);getStrengthHistoryPage(client,userId,{page:historyPage,search:debouncedHistorySearch,locationId:historyLocation!=="all"&&historyLocation!=="none"?historyLocation:undefined,noLocation:historyLocation==="none",start:days?localDateKey(new Date(Date.now()-days*86400000).toISOString()):undefined}).then(result=>{if(!active)return;const valid=validHistoryPage(result.total);setHistoryTotal(result.total);if(historyPage>valid){setHistoryPage(valid);return}setHistoryItems(result.items)}).catch(()=>{if(active)setError("Strength history could not load.")}).finally(()=>{if(active)setHistoryLoading(false)});return()=>{active=false}},[client,userId,historyPage,debouncedHistorySearch,historyLocation,days,loading]);
   const prMap = useMemo(
     () =>

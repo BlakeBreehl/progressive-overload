@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-02",
+  "unitTests": {
+    "files": 94,
+    "total": 569,
+    "passed": 569,
+    "failed": 0
+  },
+  "lint": "zero warnings/errors",
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "diffCheck": "passed",
+  "dependencyAudit": {
+    "vulnerabilities": 0
+  },
+  "browser": {
+    "engines": [
+      "Chrome",
+      "WebKit"
+    ],
+    "cases": 28,
+    "assertions": 10856,
+    "failures": 0,
+    "runtimeErrors": 0
+  },
+  "migration013LocalFileEdited": false,
+  "migration013LiveAppliedByAgent": false,
+  "liveSchema": "Both tracking_mode columns unavailable: 42703",
+  "disposablePostgresChecks": 29,
+  "authenticatedQa": false,
+  "physicalDeviceQa": false,
+  "committed": false,
+  "pushed": false,
+  "deployed": false
+}
