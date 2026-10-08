@@ -6,7 +6,7 @@ import {startAccountBootstrap} from "./lib/accountBootstrap";
 import { MobileNavigation } from "./components/MobileNavigation";
 import { FeatureBoundary } from "./components/FeatureBoundary";
 import { dataLoadMessage } from "./lib/supabaseError";
-import { ReleaseAnnouncement } from "./components/ReleaseAnnouncement";
+import { StrengthTrendsAnnouncement } from "./components/StrengthTrendsAnnouncement";
 import {
   Suspense,
   useEffect,
@@ -508,8 +508,8 @@ function App() {
   }, []);
   const setupUserId=auth.session?.user.id;
   useEffect(() => {
-    if (!setupUserId || !supabase) {queueMicrotask(()=>{setLoadedUserId(null);setSetupError("");setEnabled(defaultModules);setOnboarded(false);setWeightUnit("lb");setAddOpen(false);});return;}
     let active = true;
+    if (!setupUserId || !supabase) {queueMicrotask(()=>{if(!active)return;setLoadedUserId(null);setSetupError("");setEnabled(defaultModules);setOnboarded(false);setWeightUnit("lb");setAddOpen(false);});return()=>{active=false;};}
     const userId = setupUserId;
     queueMicrotask(()=>{if(active){setLoadedUserId(null);setSetupError("")}});
     const stop=startAccountBootstrap(supabase,userId,({setup,error})=>{
@@ -626,7 +626,7 @@ function App() {
   };
   return (
     <div className="app-frame min-h-screen bg-white text-slate-700">
-      {supabase&&auth.session&&<ReleaseAnnouncement key={auth.session.user.id} client={supabase} userId={auth.session.user.id} ready={loadedUserId===auth.session.user.id&&!setupError} onLeaderboards={()=>go("leaderboards")}/>}
+      {supabase&&auth.session&&<StrengthTrendsAnnouncement key={auth.session.user.id} client={supabase} userId={auth.session.user.id} ready={loadedUserId===auth.session.user.id&&!setupError}/>}
       <aside className="sidebar">
         <Logo />
         <nav className="mt-10 flex flex-col gap-1">

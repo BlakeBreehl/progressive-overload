@@ -1,3 +1,5 @@
+import {loadStrengthProgressRows,strengthPrEvidence,type StrengthProgressRow} from '../progress/repository';
+import {detectRepetitionPrs} from './logic';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { relationObject } from '../../lib/supabaseError';
 export function setPeriodStart(months:number,now=new Date()){return new Date(now.getFullYear(),now.getMonth()-(months-1),1);}
@@ -12,10 +14,13 @@ export function countSetGroups(rows:{id:string;exercise:unknown;tracking_type?:s
   }
   return {total:seen.size,groups:[...counts].map(([name,value])=>({name,value}))};
 }
+export function summarizeSetPeriod(rows:StrengthProgressRow[],months:number,now=new Date()){
+ const start=months===0?-Infinity:setPeriodStart(months,now).getTime();
+ const selected=rows.filter(row=>{const workout=relationObject<{performed_at:string}>(row.workout,'set period workout');const time=Date.parse(workout?.performed_at??'');return Number.isFinite(time)&&(months===0||time>=start&&time<=now.getTime());});
+ const ids=new Set(selected.map(row=>row.id));
+ const prs=detectRepetitionPrs(strengthPrEvidence(rows));
+ return {...countSetGroups(selected.map(row=>({...row,id:row.id!}))),weightPrs:prs.filter(pr=>ids.has(pr.setKey)&&pr.kinds.includes('weight')).length,repPrs:prs.filter(pr=>ids.has(pr.setKey)&&pr.kinds.includes('reps')).length};
+}
 export async function loadSetBreakdown(client:SupabaseClient,userId:string,months:number,now=new Date()){
-  const rows:{id:string;exercise:unknown;tracking_type?:string;reps?:number|null}[]=[];
-  for(let offset=0;;offset+=500){
-    const {data,error}=await client.from('strength_sets').select('id,tracking_type,reps,exercise:exercises!strength_set_exercise_type_owned_fk(major_muscle_group),workout:strength_workouts!strength_set_workout_owned_fk!inner(performed_at)').eq('user_id',userId).gte('workout.performed_at',setPeriodStart(months,now).toISOString()).lte('workout.performed_at',now.toISOString()).order('id').range(offset,offset+499);
-    if(error)throw error;rows.push(...(data??[]));if((data??[]).length<500)return countSetGroups(rows);
-  }
+ return summarizeSetPeriod(await loadStrengthProgressRows(client,userId),months,now);
 }

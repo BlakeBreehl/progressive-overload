@@ -1,0 +1,548 @@
+[
+  {
+    "mode": "chromium",
+    "width": 320,
+    "height": 568,
+    "failures": [],
+    "sourceSets": 257,
+    "completedSets": 255,
+    "defaultTimeframe": "Past 6 Months",
+    "monthlyKeys": [
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10"
+    ],
+    "monthlyRecords": 6,
+    "defaultMarkers": 42,
+    "zeroMarkers": 36,
+    "beforeZoom": "0,60",
+    "afterZoom": "38,46",
+    "actualTicks": [
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "tooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets\n\nBack: 0 sets\n\nLegs: 0 sets\n\nArms: 0 sets\n\nShoulders: 0 sets\n\nCore: 0 sets\n\nOlympic/Other: 0 sets",
+    "filteredTooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets",
+    "periods": {
+      "All Time": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past Year": [
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Months": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 3 Months": [
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Weeks": [
+        "2026-08-31",
+        "2026-09-07",
+        "2026-09-14",
+        "2026-09-21",
+        "2026-09-28",
+        "2026-10-05"
+      ]
+    },
+    "announcement": {
+      "firstShown": true,
+      "dismissedImmediately": true,
+      "afterReload": false,
+      "reconciled": true,
+      "separateAccounts": true,
+      "escape": true,
+      "authRoutesExcluded": true
+    },
+    "summaryHeight": 59.15625,
+    "keyboardStates": [
+      "true",
+      "false"
+    ],
+    "keyboardLegend": true
+  },
+  {
+    "mode": "chromium",
+    "width": 375,
+    "height": 812,
+    "failures": [],
+    "sourceSets": 257,
+    "completedSets": 255,
+    "defaultTimeframe": "Past 6 Months",
+    "monthlyKeys": [
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10"
+    ],
+    "monthlyRecords": 6,
+    "defaultMarkers": 42,
+    "zeroMarkers": 36,
+    "beforeZoom": "0,60",
+    "afterZoom": "38,46",
+    "actualTicks": [
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "tooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets\n\nBack: 0 sets\n\nLegs: 0 sets\n\nArms: 0 sets\n\nShoulders: 0 sets\n\nCore: 0 sets\n\nOlympic/Other: 0 sets",
+    "filteredTooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets",
+    "periods": {
+      "All Time": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past Year": [
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Months": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 3 Months": [
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Weeks": [
+        "2026-08-31",
+        "2026-09-07",
+        "2026-09-14",
+        "2026-09-21",
+        "2026-09-28",
+        "2026-10-05"
+      ]
+    },
+    "announcement": {
+      "firstShown": true,
+      "dismissedImmediately": true,
+      "afterReload": false,
+      "reconciled": true,
+      "separateAccounts": true,
+      "escape": true,
+      "authRoutesExcluded": true
+    },
+    "summaryHeight": 46.15625,
+    "keyboardStates": [
+      "true",
+      "false"
+    ],
+    "keyboardLegend": true
+  },
+  {
+    "mode": "chromium",
+    "width": 390,
+    "height": 844,
+    "failures": [],
+    "sourceSets": 257,
+    "completedSets": 255,
+    "defaultTimeframe": "Past 6 Months",
+    "monthlyKeys": [
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10"
+    ],
+    "monthlyRecords": 6,
+    "defaultMarkers": 42,
+    "zeroMarkers": 36,
+    "beforeZoom": "0,60",
+    "afterZoom": "38,46",
+    "actualTicks": [
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "tooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets\n\nBack: 0 sets\n\nLegs: 0 sets\n\nArms: 0 sets\n\nShoulders: 0 sets\n\nCore: 0 sets\n\nOlympic/Other: 0 sets",
+    "filteredTooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets",
+    "periods": {
+      "All Time": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past Year": [
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Months": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 3 Months": [
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Weeks": [
+        "2026-08-31",
+        "2026-09-07",
+        "2026-09-14",
+        "2026-09-21",
+        "2026-09-28",
+        "2026-10-05"
+      ]
+    },
+    "announcement": {
+      "firstShown": true,
+      "dismissedImmediately": true,
+      "afterReload": false,
+      "reconciled": true,
+      "separateAccounts": true,
+      "escape": true,
+      "authRoutesExcluded": true
+    },
+    "summaryHeight": 46.15625,
+    "keyboardStates": [
+      "true",
+      "false"
+    ],
+    "keyboardLegend": true
+  },
+  {
+    "mode": "chromium",
+    "width": 430,
+    "height": 932,
+    "failures": [],
+    "sourceSets": 257,
+    "completedSets": 255,
+    "defaultTimeframe": "Past 6 Months",
+    "monthlyKeys": [
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10"
+    ],
+    "monthlyRecords": 6,
+    "defaultMarkers": 42,
+    "zeroMarkers": 36,
+    "beforeZoom": "0,60",
+    "afterZoom": "38,46",
+    "actualTicks": [
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "tooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets\n\nBack: 0 sets\n\nLegs: 0 sets\n\nArms: 0 sets\n\nShoulders: 0 sets\n\nCore: 0 sets\n\nOlympic/Other: 0 sets",
+    "filteredTooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets",
+    "periods": {
+      "All Time": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past Year": [
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Months": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 3 Months": [
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Weeks": [
+        "2026-08-31",
+        "2026-09-07",
+        "2026-09-14",
+        "2026-09-21",
+        "2026-09-28",
+        "2026-10-05"
+      ]
+    },
+    "announcement": {
+      "firstShown": true,
+      "dismissedImmediately": true,
+      "afterReload": false,
+      "reconciled": true,
+      "separateAccounts": true,
+      "escape": true,
+      "authRoutesExcluded": true
+    },
+    "summaryHeight": 46.15625,
+    "keyboardStates": [
+      "true",
+      "false"
+    ],
+    "keyboardLegend": true
+  },
+  {
+    "mode": "chromium",
+    "width": 768,
+    "height": 1024,
+    "failures": [],
+    "sourceSets": 257,
+    "completedSets": 255,
+    "defaultTimeframe": "Past 6 Months",
+    "monthlyKeys": [
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10"
+    ],
+    "monthlyRecords": 6,
+    "defaultMarkers": 42,
+    "zeroMarkers": 36,
+    "beforeZoom": "0,60",
+    "afterZoom": "38,46",
+    "actualTicks": [
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "tooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets\n\nBack: 0 sets\n\nLegs: 0 sets\n\nArms: 0 sets\n\nShoulders: 0 sets\n\nCore: 0 sets\n\nOlympic/Other: 0 sets",
+    "filteredTooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets",
+    "periods": {
+      "All Time": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past Year": [
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Months": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 3 Months": [
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Weeks": [
+        "2026-08-31",
+        "2026-09-07",
+        "2026-09-14",
+        "2026-09-21",
+        "2026-09-28",
+        "2026-10-05"
+      ]
+    },
+    "announcement": {
+      "firstShown": true,
+      "dismissedImmediately": true,
+      "afterReload": false,
+      "reconciled": true,
+      "separateAccounts": true,
+      "escape": true,
+      "authRoutesExcluded": true
+    },
+    "summaryHeight": 46.15625,
+    "keyboardStates": [
+      "true",
+      "false"
+    ],
+    "keyboardLegend": true
+  },
+  {
+    "mode": "chromium",
+    "width": 1280,
+    "height": 900,
+    "failures": [],
+    "sourceSets": 257,
+    "completedSets": 255,
+    "defaultTimeframe": "Past 6 Months",
+    "monthlyKeys": [
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10"
+    ],
+    "monthlyRecords": 6,
+    "defaultMarkers": 42,
+    "zeroMarkers": 36,
+    "beforeZoom": "0,60",
+    "afterZoom": "38,46",
+    "actualTicks": [
+      38,
+      40,
+      42,
+      44,
+      46
+    ],
+    "tooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets\n\nBack: 0 sets\n\nLegs: 0 sets\n\nArms: 0 sets\n\nShoulders: 0 sets\n\nCore: 0 sets\n\nOlympic/Other: 0 sets",
+    "filteredTooltip": "May 2026\n\nTotal: 40 sets\n\nChest: 40 sets",
+    "periods": {
+      "All Time": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past Year": [
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+        "2026-03",
+        "2026-04",
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Months": [
+        "2026-05",
+        "2026-06",
+        "2026-07",
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 3 Months": [
+        "2026-08",
+        "2026-09",
+        "2026-10"
+      ],
+      "Past 6 Weeks": [
+        "2026-08-31",
+        "2026-09-07",
+        "2026-09-14",
+        "2026-09-21",
+        "2026-09-28",
+        "2026-10-05"
+      ]
+    },
+    "announcement": {
+      "firstShown": true,
+      "dismissedImmediately": true,
+      "afterReload": false,
+      "reconciled": true,
+      "separateAccounts": true,
+      "escape": true,
+      "authRoutesExcluded": true
+    },
+    "summaryHeight": 46.15625,
+    "keyboardStates": [
+      "true",
+      "false"
+    ],
+    "keyboardLegend": true
+  }
+]

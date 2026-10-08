@@ -26,7 +26,7 @@ describe('unsuccessful Strength attempts',()=>{
   expect(detectRepetitionPrs(strengthPrEvidence(rows)).map(x=>x.kinds)).toEqual([[],['first'],['weight']]);
   for(const mode of ['one','repWeight','all'] as const)expect(strengthModePoints(rows,'e',mode).some(point=>point.id==='1')).toBe(false);
   expect(strengthExerciseUsage(rows)).toHaveLength(2);
-  expect(countSetGroups(rows.map(r=>({...r,id:r.id!}))).total).toBe(2);expect(setTrend(rows,'monthly')[0].total).toBe(2);
+  expect(countSetGroups(rows.map(r=>({...r,id:r.id!}))).total).toBe(2);expect(setTrend(rows,'all',{now:new Date(2027,0,1)})[0].total).toBe(2);
   rows[1].reps=0;expect(detectRepetitionPrs(strengthPrEvidence(rows)).map(x=>x.kinds)).toEqual([[],[],['first']]);
   rows[0].reps=5;expect(detectRepetitionPrs(strengthPrEvidence(rows))[0].kinds).toEqual(['first']);
  });

@@ -1,0 +1,262 @@
+[
+  {
+    "mode": "chromium",
+    "width": 320,
+    "height": 568,
+    "failures": [],
+    "chartWidth": 246,
+    "wrapperWidth": 246,
+    "sourceSets": 14,
+    "completedSets": 13,
+    "monthlyRecords": 2,
+    "periodKeys": [
+      "2026-01",
+      "2026-03"
+    ],
+    "monthlyMarkers": [
+      {
+        "period": "2026-01",
+        "value": 5
+      },
+      {
+        "period": "2026-03",
+        "value": 1
+      },
+      {
+        "period": "2026-01",
+        "value": 4
+      },
+      {
+        "period": "2026-03",
+        "value": 3
+      }
+    ],
+    "weeklyKeys": [
+      "2025-12-29",
+      "2026-01-19",
+      "2026-03-02",
+      "2026-03-09"
+    ],
+    "tooltip": "January 2026\n\nTotal: 9 sets\n\nChest: 5 sets\n\nLegs: 4 sets",
+    "weeklyTooltip": "Jan 19–25, 2026\n\nTotal: 6 sets\n\nChest: 2 sets\n\nLegs: 4 sets",
+    "summaryHeight": 59.15625,
+    "colors": [
+      {
+        "background": "rgb(22, 128, 58)",
+        "color": "rgb(255, 255, 255)"
+      },
+      {
+        "background": "rgb(219, 234, 254)",
+        "color": "rgb(30, 64, 175)"
+      }
+    ]
+  },
+  {
+    "mode": "chromium",
+    "width": 375,
+    "height": 812,
+    "failures": [],
+    "chartWidth": 301,
+    "wrapperWidth": 301,
+    "sourceSets": 14,
+    "completedSets": 13,
+    "monthlyRecords": 2,
+    "periodKeys": [
+      "2026-01",
+      "2026-03"
+    ],
+    "monthlyMarkers": [
+      {
+        "period": "2026-01",
+        "value": 5
+      },
+      {
+        "period": "2026-03",
+        "value": 1
+      },
+      {
+        "period": "2026-01",
+        "value": 4
+      },
+      {
+        "period": "2026-03",
+        "value": 3
+      }
+    ],
+    "weeklyKeys": [
+      "2025-12-29",
+      "2026-01-19",
+      "2026-03-02",
+      "2026-03-09"
+    ],
+    "tooltip": "January 2026\n\nTotal: 9 sets\n\nChest: 5 sets\n\nLegs: 4 sets",
+    "weeklyTooltip": "Jan 19–25, 2026\n\nTotal: 6 sets\n\nChest: 2 sets\n\nLegs: 4 sets",
+    "summaryHeight": 46.15625,
+    "colors": [
+      {
+        "background": "rgb(22, 128, 58)",
+        "color": "rgb(255, 255, 255)"
+      },
+      {
+        "background": "rgb(219, 234, 254)",
+        "color": "rgb(30, 64, 175)"
+      }
+    ]
+  },
+  {
+    "mode": "chromium",
+    "width": 390,
+    "height": 844,
+    "failures": [],
+    "chartWidth": 316,
+    "wrapperWidth": 316,
+    "sourceSets": 14,
+    "completedSets": 13,
+    "monthlyRecords": 2,
+    "periodKeys": [
+      "2026-01",
+      "2026-03"
+    ],
+    "monthlyMarkers": [
+      {
+        "period": "2026-01",
+        "value": 5
+      },
+      {
+        "period": "2026-03",
+        "value": 1
+      },
+      {
+        "period": "2026-01",
+        "value": 4
+      },
+      {
+        "period": "2026-03",
+        "value": 3
+      }
+    ],
+    "weeklyKeys": [
+      "2025-12-29",
+      "2026-01-19",
+      "2026-03-02",
+      "2026-03-09"
+    ],
+    "tooltip": "January 2026\n\nTotal: 9 sets\n\nChest: 5 sets\n\nLegs: 4 sets",
+    "weeklyTooltip": "Jan 19–25, 2026\n\nTotal: 6 sets\n\nChest: 2 sets\n\nLegs: 4 sets",
+    "summaryHeight": 46.15625,
+    "colors": [
+      {
+        "background": "rgb(22, 128, 58)",
+        "color": "rgb(255, 255, 255)"
+      },
+      {
+        "background": "rgb(219, 234, 254)",
+        "color": "rgb(30, 64, 175)"
+      }
+    ]
+  },
+  {
+    "mode": "chromium",
+    "width": 430,
+    "height": 932,
+    "failures": [],
+    "chartWidth": 356,
+    "wrapperWidth": 356,
+    "sourceSets": 14,
+    "completedSets": 13,
+    "monthlyRecords": 2,
+    "periodKeys": [
+      "2026-01",
+      "2026-03"
+    ],
+    "monthlyMarkers": [
+      {
+        "period": "2026-01",
+        "value": 5
+      },
+      {
+        "period": "2026-03",
+        "value": 1
+      },
+      {
+        "period": "2026-01",
+        "value": 4
+      },
+      {
+        "period": "2026-03",
+        "value": 3
+      }
+    ],
+    "weeklyKeys": [
+      "2025-12-29",
+      "2026-01-19",
+      "2026-03-02",
+      "2026-03-09"
+    ],
+    "tooltip": "January 2026\n\nTotal: 9 sets\n\nChest: 5 sets\n\nLegs: 4 sets",
+    "weeklyTooltip": "Jan 19–25, 2026\n\nTotal: 6 sets\n\nChest: 2 sets\n\nLegs: 4 sets",
+    "summaryHeight": 46.15625,
+    "colors": [
+      {
+        "background": "rgb(22, 128, 58)",
+        "color": "rgb(255, 255, 255)"
+      },
+      {
+        "background": "rgb(219, 234, 254)",
+        "color": "rgb(30, 64, 175)"
+      }
+    ]
+  },
+  {
+    "mode": "chromium",
+    "width": 1280,
+    "height": 900,
+    "failures": [],
+    "chartWidth": 926,
+    "wrapperWidth": 926,
+    "sourceSets": 14,
+    "completedSets": 13,
+    "monthlyRecords": 2,
+    "periodKeys": [
+      "2026-01",
+      "2026-03"
+    ],
+    "monthlyMarkers": [
+      {
+        "period": "2026-01",
+        "value": 5
+      },
+      {
+        "period": "2026-03",
+        "value": 1
+      },
+      {
+        "period": "2026-01",
+        "value": 4
+      },
+      {
+        "period": "2026-03",
+        "value": 3
+      }
+    ],
+    "weeklyKeys": [
+      "2025-12-29",
+      "2026-01-19",
+      "2026-03-02",
+      "2026-03-09"
+    ],
+    "tooltip": "January 2026\n\nTotal: 9 sets\n\nChest: 5 sets\n\nLegs: 4 sets",
+    "weeklyTooltip": "Jan 19–25, 2026\n\nTotal: 6 sets\n\nChest: 2 sets\n\nLegs: 4 sets",
+    "summaryHeight": 46.15625,
+    "colors": [
+      {
+        "background": "rgb(22, 128, 58)",
+        "color": "rgb(255, 255, 255)"
+      },
+      {
+        "background": "rgb(219, 234, 254)",
+        "color": "rgb(30, 64, 175)"
+      }
+    ]
+  }
+]

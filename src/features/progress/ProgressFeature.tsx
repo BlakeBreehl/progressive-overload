@@ -385,7 +385,7 @@ export function StrengthProgress({
         </div>
       </div>
       {activePoint&&<div role="status" aria-live="polite"><StrengthTooltip active unit={chartUnit} payload={[{name:lineLabel,value:activePoint.result,payload:activePoint}]}/><button className="text-button" onClick={()=>setActiveSet(null)}>Close set details</button></div>}
-      <SetsByMuscleGroup lineStyle={lineStyle} rows={rows} start={axisDates.start} end={axisDates.end} location={location}/>
+      <SetsByMuscleGroup rows={rows} location={location}/>
       <StrengthTable
         unit={unit}
         title="Monthly — last 12 calendar months"

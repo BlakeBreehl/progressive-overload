@@ -1,3 +1,4 @@
+import {confirmationRedirect,resendVerification} from './lib/emailConfirmation';
 import {ForgotPassword} from './components/PasswordManagement';
 import { useId, useState, type FormEvent } from "react";
 import { supabase } from "./lib/supabase";
@@ -42,7 +43,7 @@ export function AuthScreen() {
           : await supabase.auth.signUp({
               email: email.trim(),
               password,
-              options: { data: { display_name: displayName.trim() || null } },
+              options: { emailRedirectTo:confirmationRedirect(location.origin), data: { display_name: displayName.trim() || null } },
             });
       if (result.error) {
         setKind("error");
@@ -179,6 +180,7 @@ export function AuthScreen() {
           </button>
         </form>
         {mode==="sign-in"&&<button className="text-button mt-4" disabled={busy} onClick={()=>{setPassword("");setForgot(true);}}>Forgot Password?</button>}
+        <button className="text-button mt-4" disabled={busy||!email.trim()} onClick={async()=>{setBusy(true);setKind("success");setMessage(await resendVerification(supabase!,email,location.origin));setBusy(false);}}>Resend verification email</button>
         <div className="auth-switch">
           <span>
             {mode === "sign-in"

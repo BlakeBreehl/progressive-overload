@@ -83,3 +83,7 @@ button{touch-action:manipulation}
 .progress-table th:first-child { width:12rem; max-width:12rem; white-space:normal; overflow-wrap:anywhere; }
 .recharts-tooltip-wrapper > * { max-width:100%; }
 .content .overflow-x-auto { min-width:0; max-width:100%; contain:inline-size layout; }
+/* Reuse the Leaderboards PR badge colors; only adapt compact summary geometry. */
+.compact-pr-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.4rem;padding:.55rem .6rem;border-radius:.65rem;min-width:0;box-shadow:none}.compact-pr-summary::before{content:none}.compact-pr-summary svg{width:1.1rem;height:1.1rem;flex-shrink:0}.compact-pr-summary dt{display:flex;align-items:center;gap:.4rem;min-width:0;font-size:.7rem;line-height:1.2}.compact-pr-summary dt small{display:block;margin-top:.2rem;font-size:.6rem;font-weight:500}.compact-pr-summary dd{margin:0;font-size:1.25rem;font-weight:900;font-variant-numeric:tabular-nums}
+.muscle-legend-button:hover{background:#f5f5f5;border-color:#a3a3a3}.muscle-legend-button:focus-visible{outline:2px solid #d71920;outline-offset:2px}.muscle-legend-button:active{background:#eee}.muscle-legend-hidden{color:#737373;background:#fff}
+.strength-release-hero{border-left:4px solid #d71920;padding:.75rem;background:#fff}.strength-release-highlights{display:grid;gap:.8rem;padding:0;margin:1rem 0 0;list-style:none}.strength-release-highlights li{display:grid;gap:.2rem}.strength-release-highlights strong{color:#111}.strength-release-highlights span{color:#525252;font-size:.8rem;line-height:1.45}

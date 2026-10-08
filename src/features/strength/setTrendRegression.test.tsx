@@ -1,0 +1,9 @@
+﻿import {expect,it} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {SetTrendDot,SetsByMuscleGroup} from './SetsByMuscleGroup';
+import {setTrend} from './setTrend';
+import type {StrengthProgressRow} from '../progress/repository';
+const row=(id:string,date:string,group='Chest'):StrengthProgressRow=>({id,exercise_id:group,tracking_type:'repetitions',set_order:1,weight:100,reps:5,load:null,distance:null,distance_unit:null,laps:null,duration_seconds:null,exercise:{major_muscle_group:group},workout:{id,performed_at:date}});
+it('new regression: January and March explicitly include February zero totals and connected points',()=>{const points=setTrend([row('a','2026-01-03'),row('b','2026-01-20'),row('c','2026-03-04')],'three-months',{now:new Date(2026,2,9)});expect(points.map(p=>[p.date,p.Chest])).toEqual([['2026-01',2],['2026-02',0],['2026-03',1]]);expect(points.every(p=>Object.values(p).every(value=>value!==null))).toBe(true);});
+it('draws zero and positive period markers but excludes invalid negative/nonfinite values',()=>{for(const value of [null,undefined,-1,NaN,Infinity])expect(renderToStaticMarkup(<SetTrendDot cx={10} cy={20} value={value}/>)).toBe('');for(const value of [0,5])expect(renderToStaticMarkup(<SetTrendDot cx={10} cy={20} value={value} payload={{date:'2026-01'}}/>)).toContain('data-period="2026-01"');expect(renderToStaticMarkup(<SetTrendDot active cx={10} cy={20} value={0} fill="#2563eb" stroke="white"/>)).toContain('fill="#2563eb"');});
+it('shows the six-month default and removes the obsolete explanatory note and aggregation controls',()=>{const html=renderToStaticMarkup(<SetsByMuscleGroup rows={[]} location="" now={new Date(2026,9,8)}/>);expect(html).toContain('Past 6 Months');expect(html).toContain('data-period-count="6"');expect(html).not.toContain('Empty periods are omitted');expect(html).not.toContain('Aggregation');expect(html).toContain('aria-pressed="true"');});

@@ -1,0 +1,10 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {YourSets} from '../../src/features/strength/YourSets';
+import '../../src/index.css';
+const now=new Date(),current=new Date(now.getFullYear(),now.getMonth(),1).toISOString(),old=new Date(now.getFullYear()-2,0,1).toISOString();
+const rows=[{id:'a',exercise_id:'bench',tracking_type:'repetitions',set_order:1,weight:100,reps:5,exercise:{major_muscle_group:'Chest'},workout:{id:'a',performed_at:old,created_at:old}},{id:'b',exercise_id:'bench',tracking_type:'repetitions',set_order:1,weight:110,reps:5,exercise:{major_muscle_group:'Chest'},workout:{id:'b',performed_at:current,created_at:current}}];
+const query={select:()=>query,eq:()=>query,order:()=>query,range:async()=>({data:rows,error:null})};
+createRoot(document.getElementById('root')).render(<React.StrictMode><div style={{padding:16}}><YourSets client={{from:()=>query}} userId="fixture"/></div></React.StrictMode>);
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+(async()=>{await wait(1200);const failures=[];const check=()=>{if(document.documentElement.scrollWidth>innerWidth)failures.push('horizontal overflow');};check();if(!document.querySelector('svg.recharts-surface'))failures.push('missing populated wheel');if(document.querySelector('dd')?.textContent!=='1')failures.push('wrong month PR count');document.querySelector('button[aria-haspopup="listbox"]').click();await wait(100);const option=[...document.querySelectorAll('[role="option"]')].find(node=>node.textContent.includes('All Time'));if(!option)failures.push('missing All Time');else option.click();await wait(500);check();if(!document.body.innerText.includes('All Time'))failures.push('timeframe did not change');if(document.querySelector('dd')?.textContent!=='1')failures.push('wrong all time PR count');document.getElementById('result').textContent=JSON.stringify({failures,text:document.body.innerText});})().catch(error=>{document.getElementById('result').textContent=JSON.stringify({error:String(error)});});
