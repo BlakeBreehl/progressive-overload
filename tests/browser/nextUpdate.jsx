@@ -40,5 +40,26 @@ const choose=async text=>{await type('Activity',text);option().click();await wai
  await render(<StrengthProgress rows={rows} unit="lb"/>);const section=document.querySelector('[aria-label="PRs Over Time"]'),scroller=section.querySelector('[role=region]');check(!!section&&section.getBoundingClientRect().height<280,'compact prominent PR section');check(scroller.scrollLeft>0,'timeline starts at recent months');check(section.textContent.includes('Jan 2024')&&section.textContent.includes('Dec 2026'),'all months included');overflow('Monthly Progress');
  await click('Yearly');check(section.querySelectorAll('thead th').length===4,'yearly aggregates');overflow('Yearly Progress');
  await click('Monthly');check(section.querySelectorAll('thead th').length===37,'monthly restoration');
+ const graph=document.querySelector('[aria-label="Strength exercise graph"]'),panel=graph.querySelector('details.chart-controls');
+ check(document.querySelectorAll('[aria-label="PRs Over Time"]').length===1,'one PR card');
+ check(section.previousElementSibling?.textContent==='Strength Progress'&&section.nextElementSibling===graph,'heading then PR card then exercise graph');
+ check(!panel.open,'Chart Controls defaults collapsed');
+ const visible=node=>node.checkVisibility()&&node.getClientRects().length>0;
+ check([...graph.querySelectorAll('input,button')].filter(visible).length===1&&visible(field('Exercise')),'only Exercise visible when collapsed');
+ for(const label of ['Location','Graph mode','Time period'])check([...panel.querySelectorAll('.field-label')].filter(node=>node.textContent===label).length===1,'one '+label+' inside Chart Controls');
+ panel.querySelector('summary').click();await wait(100);
+ const select=async(label,text)=>{const container=[...panel.querySelectorAll('.custom-select')].find(node=>node.querySelector('.field-label')?.textContent===label);container.querySelector('button').click();await wait(70);const target=[...document.querySelectorAll('[role=option]')].find(node=>node.textContent.trim()===text);target.click();await wait(100);};
+ await type('Location','No location');option().click();await wait(100);
+ await select('Graph mode','All Logged Sets');await select('Line Style','Smooth');await select('Time period','Custom Range');
+ await type('Start date','2024-01-01');await type('End date','2026-12-31');await type('Y minimum','50');await type('Y maximum','200');
+ const snapshot=()=>[...graph.querySelectorAll('input,button.select-trigger')].map(node=>node.tagName==='INPUT'?node.value:node.textContent);
+ const before=snapshot(),chartBefore=graph.querySelector('.recharts-wrapper')?.innerHTML;
+ overflow('Open Chart Controls');
+ for(const node of panel.querySelectorAll('input,button.select-trigger')){const rect=node.getBoundingClientRect();check(rect.left>=0&&rect.right<=innerWidth,'control fits phone');}
+ panel.querySelector('summary').click();await wait(80);check(JSON.stringify(snapshot())===JSON.stringify(before),'closing preserves every selection');check(graph.querySelector('.recharts-wrapper')?.innerHTML===chartBefore,'closing preserves graph');
+ check([...graph.querySelectorAll('input,button')].filter(visible).length===1,'closing hides all secondary fields');
+ panel.querySelector('summary').click();await wait(80);check(JSON.stringify(snapshot())===JSON.stringify(before),'reopening preserves every selection');check(field('Exercise').value==='Bench Press'&&field('Location').value==='No location'&&field('Start date').value==='2024-01-01'&&field('End date').value==='2026-12-31','exercise location and dates remain selected');overflow('Reopened Chart Controls');
+ panel.querySelector('summary').click();await wait(80);
+
  document.getElementById('result').textContent=JSON.stringify({failures,fixture:"next-update",prHeight:section.getBoundingClientRect().height});
 })().catch(error=>document.getElementById('result').textContent=JSON.stringify({error:String(error),stack:error.stack,failures,announcementPreview:true}));

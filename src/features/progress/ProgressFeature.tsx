@@ -336,13 +336,19 @@ export function StrengthProgress({
   const exerciseName=exercises.find(([id])=>id===exercise)?.[1]??automatic.name;
   return (
     <div className="space-y-5">
-      <div className="primary-filters grid gap-3 lg:grid-cols-4">
+      <h2 className="font-display text-xl font-bold text-ink">Strength Progress</h2>
+      <PrHistory rows={rows} location={location} locationLabel={location==="__none__"?"No location":locations.find(([id])=>id===location)?.[1]??"All locations"}/>
+      <div className="surface-card min-w-0" aria-label="Strength exercise graph">
+        <div className="primary-filters min-w-0">
         <Combobox
           label="Exercise"
           value={exercise}
           options={exercises.map(([id, name]) => ({ value: id, label: name }))}
           onChange={(value)=>{setSelected(value);setModeSelection(null);}}
         />
+        </div>
+        <div className="mt-3">
+          <ChartControls settings={axes} setSettings={setAxes} unit={chartUnit} rangeInside>
         <Combobox
           label="Location"
           value={location}
@@ -354,14 +360,10 @@ export function StrengthProgress({
           onChange={setLocation}
         />
         <Select label="Graph mode" value={effectiveMode} options={strengthModes.filter(option=>!assisted||option.value!=='one').map(option=>({...option,label:assisted&&option.value==='repWeight'?'Assistance Progress':option.label,disabled:(isDistance||repsOnly)&&option.value!=='all'}))} onChange={value=>setModeSelection({exerciseId:exercise,mode:value as StrengthMode})} />
-        <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={chartUnit}><Select label="Line Style" value={lineStyle} options={[{value:"straight",label:"Straight"},{value:"smooth",label:"Smooth"}]} onChange={value=>setLineStyle(value as LineStyle)}/></ChartControls></div>
-
-      </div>
-      <PrHistory rows={rows} location={location} locationLabel={location==="__none__"?"No location":locations.find(([id])=>id===location)?.[1]??"All locations"}/>
-      <div className="surface-card">
-        <h2 className="font-display text-lg font-bold text-ink">
-          {exerciseName} Progress
-        </h2>
+            <Select label="Line Style" value={lineStyle} options={[{value:"straight",label:"Straight"},{value:"smooth",label:"Smooth"}]} onChange={value=>setLineStyle(value as LineStyle)}/>
+          </ChartControls>
+        </div>
+        <h3 className="mt-4 font-display text-lg font-bold text-ink">{exerciseName} Progress</h3>
         {effectiveMode==='repWeight'&&<p className="mt-1 text-xs text-slate-500">{assisted?'Less assistance is progress · 4+ reps':'Best weight · 4+ reps'}</p>}
         <div className="mt-3 h-80">
           {chart.length ? (
