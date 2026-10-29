@@ -13,7 +13,7 @@ describe("selection controls", () => {
 
   it("exposes combobox filtering and multi-select semantics", () => {
     expect(controls).toContain('role="combobox"');
-    expect(controls).toContain(".includes(query.toLowerCase())");
+    expect(controls).toContain(".includes(normalize(query??''))");
     expect(controls).toContain('aria-multiselectable="true"');
     expect(controls).toContain("createPortal(");
   });

@@ -49,7 +49,7 @@ void(async()=>{
       sessionStorage.setItem('entry-edit-refresh',JSON.stringify({workouts,cardio,checks,phase:'cardio'})); location.reload(); return;
     }
     await render(<CardioFeature key={++revision} client={client} userId="u"/>); await click('Edit');
-    assert(field('Activity').placeholder==='StairMaster' && field('Steps').value==='12345', 'actual refresh during Cardio edit reloads saved activity and steps');
+    assert(field('Activity').value==='StairMaster' && field('Steps').value==='12345', 'actual refresh during Cardio edit reloads saved activity and steps');
     assert(calls.length===0, 'Cardio refresh never writes or inserts');
     assert(runtimeErrors.length===0, 'no errors after page refresh');
     document.getElementById('result').textContent=JSON.stringify({checks:checks.length,failures:checks.filter(c=>!c.pass)}); return;
@@ -72,7 +72,7 @@ void(async()=>{
   const popped=new Promise(resolve=>window.addEventListener('popstate',resolve,{once:true})); history.back(); await popped; await wait(80);
   assert(field('Steps').value==='12345' && calls.length===0, 'browser Back on same screen does not erase or save the edit');
   const cardioValues=[...document.querySelectorAll('.surface-card input,.surface-card textarea')].map(node=>node.value);fail=true;await click('Save Cardio Entry');equal([...document.querySelectorAll('.surface-card input,.surface-card textarea')].map(node=>node.value),cardioValues,'failed Cardio save retains complete form');fail=false;await click('Save Cardio Entry');assert(calls.every(call=>call.kind==='update'&&call.id==='cardio-existing'),'Cardio uses update with original ID');assert(cardio.length===1,'no duplicate Cardio');equal([cardio[0].step_count,cardio[0].distance,cardio[0].speed,cardio[0].incline,cardio[0].difficulty,cardio[0].laps],[12345,3.4,5.6,2,7,4],'hidden-by-default metrics all serialize');assert(cardio[0].performed_at==='2020-02-03T15:23:47.123Z'&&cardio[0].created_at==='2020-02-04T11:22:33Z','Cardio timestamps retained');
-  await click('Done / View History');await click('Edit');await chooseActivity('Running');await click('Cancel');assert(cardio[0].activity_id==='stairs','Cardio Cancel leaves saved activity unchanged');await render(<CardioFeature key={++revision} client={client} userId="u"/>);await click('Edit');assert(field('Activity').placeholder==='StairMaster'&&field('Steps').value==='12345','Cardio refresh reloads persisted values');
+  await click('Done / View History');await click('Edit');await chooseActivity('Running');await click('Cancel');assert(cardio[0].activity_id==='stairs','Cardio Cancel leaves saved activity unchanged');await render(<CardioFeature key={++revision} client={client} userId="u"/>);await click('Edit');assert(field('Activity').value==='StairMaster'&&field('Steps').value==='12345','Cardio refresh reloads persisted values');
   cardio.push(...Array.from({length:20},(_,i)=>({...structuredClone(cardio[0]),id:'cardio-older-'+i,activity_id:'run',activity:{name:'Running'}})));
   await render(<CardioFeature key={++revision} client={client} userId="u"/>); await click('Next'); await click('Edit');
   await chooseActivity('Treadmill'); await chooseActivity('Running'); await chooseActivity('StairMaster'); await click('Save Cardio Entry');

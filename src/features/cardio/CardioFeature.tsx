@@ -70,6 +70,8 @@ export function CardioFeature({
     [historyLocation, setHistoryLocation] = useState("all"),
     [historyPage, setHistoryPage] = useState(1);
   const [pendingActivity,setPendingActivity]=useState<ReturnType<typeof cardioActivityChange>|null>(null);
+  const lastConfirmedActivity=useRef("");
+  useEffect(()=>{if(!form)lastConfirmedActivity.current="";else if(form.activityId)lastConfirmedActivity.current=form.activityId;},[form]);
   useUnsavedForm(form,saving);
   useUnsavedForm({activityName},false,editingActivity?.id??null);
   const [historyRevision,setHistoryRevision]=useState(0);
@@ -103,6 +105,7 @@ export function CardioFeature({
   };
   const save = async () => {
     if (!form || saving) return;
+    if(!activities.some(activity=>activity.id===form.activityId)){setError("Select an activity from the results before saving.");return;}
     const activity = activities.find((a) => a.id === form.activityId),
       errors = form.trackingMode==='steps' ? (activity ? [] : ['Choose an activity.']) : validateCardio({
         activityName: activity?.name ?? "",
@@ -188,17 +191,21 @@ export function CardioFeature({
             {form.id ? "Edit" : "Add"} Cardio Entry
           </h2>
           <div className="mt-4 grid items-start gap-4 md:grid-cols-2">
+            <div className="min-w-0">
             <Combobox
               autoFocus
-              key={`${form.activityId}-${!!pendingActivity}`}
+              key={`${form.id??"new"}-${!!pendingActivity}`}
               label="Activity"
               placeholder="Choose activity"
               value={form.activityId}
               options={activities
-                .filter((activity) => !activity.archived)
+                .filter((activity) => !activity.archived || activity.id===form.activityId)
                 .map((activity) => ({ value: activity.id, label: activity.name }))}
+              onSearchChange={()=>setForm(current=>current?{...current,activityId:""}:current)}
               onChange={(activityId) => {const change=cardioActivityChange(form,activityId,activities.find(a=>a.id===activityId)?.tracking_mode??'timed');if(change.removed.length)setPendingActivity(change);else setForm(change.next);}}
             />
+            <p className="mt-1 text-xs text-slate-600" role="status">{selected?`Selected: ${selected.name}`:"Choose a result to confirm the activity."}</p>
+            </div>
             {!isSteps && <DurationWheel
               hours={form.h}
               minutes={form.m}
@@ -353,7 +360,7 @@ export function CardioFeature({
           </div>
         </div>
       )}
-      <ConfirmDialog open={!!pendingActivity} title="Change activity?" description={`This removes: ${pendingActivity?.removed.join(', ')??''}. Your date, location, and notes will be kept.`} confirmLabel="Change Activity" destructive={false} onCancel={()=>setPendingActivity(null)} onConfirm={()=>{if(pendingActivity)setForm(pendingActivity.next);setPendingActivity(null)}}/>
+      <ConfirmDialog open={!!pendingActivity} title="Change activity?" description={`This removes: ${pendingActivity?.removed.join(', ')??''}. Your date, location, and notes will be kept.`} confirmLabel="Change Activity" destructive={false} onCancel={()=>{setForm(current=>current?{...current,activityId:lastConfirmedActivity.current}:current);setPendingActivity(null)}} onConfirm={()=>{if(pendingActivity)setForm(pendingActivity.next);setPendingActivity(null)}}/>
       <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_.65fr]">
         <div>
           <h2 className="font-display text-xl font-bold text-ink">History</h2>

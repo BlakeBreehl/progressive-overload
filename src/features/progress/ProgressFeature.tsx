@@ -1,3 +1,4 @@
+import {PrHistory} from './PrHistoryCard';
 import {StepsProgress} from '../cardio/StepsProgress';
 import {SetsByMuscleGroup} from "../strength/SetsByMuscleGroup";
 import {distanceMiles} from "../../lib/distanceUnits";
@@ -356,6 +357,7 @@ export function StrengthProgress({
         <div className="lg:col-span-2"><ChartControls settings={axes} setSettings={setAxes} unit={chartUnit}><Select label="Line Style" value={lineStyle} options={[{value:"straight",label:"Straight"},{value:"smooth",label:"Smooth"}]} onChange={value=>setLineStyle(value as LineStyle)}/></ChartControls></div>
 
       </div>
+      <PrHistory rows={rows} location={location} locationLabel={location==="__none__"?"No location":locations.find(([id])=>id===location)?.[1]??"All locations"}/>
       <div className="surface-card">
         <h2 className="font-display text-lg font-bold text-ink">
           {exerciseName} Progress
