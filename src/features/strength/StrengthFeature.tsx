@@ -1,3 +1,4 @@
+import { blankDropSet, duplicateSet, performances, setIdentity } from './dropSets';
 import { CollapsibleNotes } from '../../components/CollapsibleNotes';
 import { exerciseLogSubtitle } from './searchMetadata';
 import { summarizeExercises } from './exerciseSummary';
@@ -128,7 +129,7 @@ function PrBadges({ kinds }: { kinds: string[] }) {
     </span>
   );
 }
-function SetText({ set, unit }: { set: StrengthSet; unit: string }) {
+export function SetText({ set, unit }: { set: StrengthSet; unit: string }) {
   return set.trackingType === "repetitions" ? (
     <>
       {set.reps === 0 && <span className="tag">Attempt</span>} {set.weight === undefined ? `${set.reps} reps` : `${displayWeight(set.weight,set.weightUnit??"lb",unit as WeightUnit)} ${unit}${set.progressionDirection === "lower_is_better" ? " assistance" : ""} × ${set.reps}`}
@@ -143,6 +144,10 @@ function SetText({ set, unit }: { set: StrengthSet; unit: string }) {
         : ""}
     </>
   );
+}
+
+export function DropSetHistory({set,unit,prs}:{set:StrengthSet;unit:string;prs:Map<string,string[]>}) {
+  return <>{set.dropSets?.map((drop,index)=><span className="drop-set-history block text-sm" key={setIdentity(drop)}>Drop Set {index+1}: <SetText set={drop} unit={unit}/> <PrBadges kinds={drop.reps===0?[]:prs.get(drop.id??'')??[]}/></span>)}</>;
 }
 
 function highlightExercise(name:string,query:string){
@@ -232,7 +237,7 @@ function ExercisePicker({
   );
 }
 
-function SetRow({
+export function SetRow({
   set,
   index,
   unit,
@@ -241,7 +246,11 @@ function SetRow({
   onDuplicate,
   busy,
   canRemove,
+  nested = false,
+  showNumber = true,
 }: {
+  nested?: boolean;
+  showNumber?: boolean;
   set: StrengthSet;
   index: number;
   unit: string;
@@ -251,17 +260,27 @@ function SetRow({
   busy: boolean;
   canRemove: boolean;
 }) {
+  const container = useRef<HTMLDivElement>(null);
+  const previous = useRef(new Set((set.dropSets??[]).map(setIdentity)));
+  useEffect(() => {
+    const count = set.dropSets?.length ?? 0;
+    const addedIndex=(set.dropSets??[]).findIndex(row=>!previous.current.has(setIdentity(row)));
+    if (addedIndex>=0) container.current?.querySelectorAll<HTMLElement>('.drop-set-row').item(addedIndex)?.querySelector<HTMLInputElement>('input')?.focus();
+    else if (count < previous.current.size) container.current?.querySelector<HTMLElement>('[data-add-drop]')?.focus();
+    previous.current = new Set((set.dropSets??[]).map(setIdentity));
+  }, [set.dropSets, set.loadMode]);
   const number = (key: keyof StrengthSet, value: string) =>
     onChange(current=>({ ...current, [key]: value === "" ? undefined : Number(value) }));
   return (
-    <div className="set-card">
+    <div ref={container} className={nested ? "drop-set-row" : "set-card"} role="group" aria-label={nested ? `Drop Set ${index + 1}` : `Set ${index + 1} group`}>
       <div className="set-action-row">
-        <strong className="text-xs text-slate-400">SET {index + 1}</strong>
-        <div className="flex gap-2">
-          <button type="button" className="set-action" aria-label={`Duplicate set ${index + 1}`} disabled={busy} onClick={onDuplicate}>
+        <strong className="text-xs text-slate-600">{nested ? `Drop Set ${index + 1}` : set.dropSets?.length ? "Main Set" : showNumber ? `SET ${index + 1}` : ""}</strong>
+        <div className="set-controls">
+          {!nested && set.trackingType === 'repetitions' && <button type="button" data-add-drop className="set-action" disabled={busy} onClick={()=>onChange(current=>({...current,dropSets:[...(current.dropSets??[]),blankDropSet(current)]}))}>Add Drop Set</button>}
+          <button type="button" className="set-action" aria-label={`Duplicate ${nested ? "drop set" : "set"} ${index + 1}`} disabled={busy} onClick={onDuplicate}>
             <span aria-hidden="true">⧉</span> Duplicate
           </button>
-          <button type="button" className="set-action set-action-remove" aria-label={`Remove set ${index + 1}`} disabled={busy || !canRemove} onClick={onRemove}>
+          <button type="button" className="set-action set-action-remove" aria-label={`Remove ${nested ? "drop set" : "set"} ${index + 1}`} disabled={busy || !canRemove} onClick={onRemove}>
             <span aria-hidden="true">−</span> Remove
           </button>
         </div>
@@ -359,13 +378,17 @@ function SetRow({
           {set.load !== undefined && <label className="field-label">Recorded load ({unit})<input className="field-input" type="number" min="0" step="any" value={set.load} onChange={event => number("load", event.target.value)} /></label>}
           {set.durationSeconds !== undefined && <label className="field-label">Duration (seconds, optional)<input className="field-input" type="number" min="0" step="any" value={set.durationSeconds} onChange={event => number("durationSeconds", event.target.value)} /></label>}
         </>}
-        <CollapsibleNotes label="Set notes" value={set.notes ?? ""} onChange={notes=>onChange(current=>({...current,notes}))} />
+        {!nested && <CollapsibleNotes label="Set notes" value={set.notes ?? ""} onChange={notes=>onChange(current=>({...current,notes}))} />}
       </div>
+      {!nested && set.dropSets?.map((drop, dropIndex)=><SetRow key={setIdentity(drop)} set={drop} index={dropIndex} unit={drop.weightUnit??unit} nested busy={busy} canRemove
+        onChange={update=>onChange(current=>({...current,dropSets:current.dropSets?.map(row=>setIdentity(row)===setIdentity(drop)?update(row):row)}))}
+        onRemove={()=>onChange(current=>({...current,dropSets:current.dropSets?.filter(row=>setIdentity(row)!==setIdentity(drop))}))}
+        onDuplicate={()=>onChange(current=>({...current,dropSets:current.dropSets?.flatMap(row=>setIdentity(row)===setIdentity(drop)?[row,duplicateSet(row)]:[row])}))} />)}
     </div>
   );
 }
 
-function WorkoutForm({
+export function WorkoutForm({
   draft,
   setDraft,
   exercises,
@@ -459,6 +482,7 @@ function WorkoutForm({
                     key={set.id ?? set.clientKey}
                     set={set}
                     index={si}
+                    showNumber={block.sets.length>1}
                     busy={saving}
                     canRemove={block.sets.length>1}
                     unit={set.weightUnit??(draft.id?"lb":unit)}
@@ -477,7 +501,7 @@ function WorkoutForm({
                     onDuplicate={() =>
                       !saving && updateBlock(block.key, current => ({ ...current, sets: current.sets.flatMap(row =>
                         (row.id ?? row.clientKey) === (set.id ?? set.clientKey)
-                          ? [row, { ...row, id: undefined, clientKey: uid() }] : [row]) }))
+                          ? [row, duplicateSet(row)] : [row]) }))
                     }
                   />
                 ))}
@@ -939,16 +963,17 @@ function HistoryList({
                 </div>
                 <p className="mt-1 text-sm text-slate-700">
                   {group.sets.length === 1 ? (
-                    <SetText set={group.sets[0]} unit={unit} />
+                    <>{!!group.sets[0].dropSets?.length && "Main Set: "}<SetText set={group.sets[0]} unit={unit} /></>
                   ) : (
                     result
                   )}
                 </p>
+                {group.sets.length===1 && <DropSetHistory set={group.sets[0]} unit={unit} prs={prs}/>}
                 {group.sets.length > 1 && (
                   <div className="mt-1 space-y-0.5 text-xs text-slate-600">
                     {group.sets.map((set, index) => (
-                      <div key={set.id ?? index}>
-                        Set {index + 1}: <SetText set={set} unit={unit} />
+                      <div key={set.id ?? set.clientKey}>
+                        {set.dropSets?.length ? "Main Set" : `Set ${index + 1}`}: <SetText set={set} unit={unit} /><DropSetHistory set={set} unit={unit} prs={prs}/>
                       </div>
                     ))}
                   </div>
@@ -1107,7 +1132,7 @@ export function StrengthFeature({
   );
   const historyResults = {items:historyItems,total:historyTotal,page:historyPage,pages:Math.max(1,Math.ceil(historyTotal/20)),start:historyTotal?(historyPage-1)*20+1:0,end:Math.min(historyPage*20,historyTotal)};
   const recentIds = new Set(
-    workouts.slice(0, 3).flatMap((w) => w.sets.map((s) => s.id!)),
+    workouts.slice(0, 3).flatMap((w) => w.sets.flatMap(s => performances(s).map(performance => performance.id!))),
   );
   const recentPrs = [...prMap.entries()].filter(
     ([id, k]) =>
@@ -1168,7 +1193,7 @@ export function StrengthFeature({
     return <section className="strength-success mx-auto max-w-2xl">
       <div className="success-mark" aria-hidden="true">&#10003;</div><p className="eyebrow">STRENGTH SAVED</p><h1 className="page-title">Lift Logged</h1>
       {w ? <div className="surface-card mt-6 flex-1"><p className="text-sm text-slate-500">{new Date(w.performedAt).toLocaleDateString()} &middot; {w.location?.name??'No location'}</p>
-        <div className="mt-5 space-y-4">{w.sets.map((set,index)=><div key={set.id??set.clientKey} className="saved-set"><h2 className="text-xl font-bold">{set.exercise.name}</h2>{w.sets.length>1&&<p className="eyebrow mt-2">Set {index+1}</p>}<p className="mt-2 text-lg"><SetText set={set} unit={weightUnit}/></p><PrBadges kinds={set.reps===0?[]:prMap.get(set.id!)??[]}/></div>)}</div>
+        <div className="mt-5 space-y-4">{w.sets.map((set,index)=><div key={set.id??set.clientKey} className="saved-set"><h2 className="text-xl font-bold">{set.exercise.name}</h2>{(w.sets.length>1||!!set.dropSets?.length)&&<p className="eyebrow mt-2">{set.dropSets?.length?"Main Set":`Set ${index+1}`}</p>}<p className="mt-2 text-lg"><SetText set={set} unit={weightUnit}/></p><PrBadges kinds={set.reps===0?[]:prMap.get(set.id!)??[]}/><DropSetHistory set={set} unit={weightUnit} prs={prMap}/></div>)}</div>
       </div>:<p role="status">Entry saved. Open History to reload its details.</p>}
       <div className="mt-6 grid gap-3"><button className="primary-button" disabled={!w} onClick={()=>w&&edit(w)}>Edit Entry</button><button className="secondary-button" onClick={()=>setView('history')}>View Strength History</button><button className="secondary-button" onClick={()=>setView('hub')}>Done / Return to Strength</button></div>
     </section>;

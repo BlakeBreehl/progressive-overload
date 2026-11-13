@@ -1,3 +1,4 @@
+import { performances } from './dropSets';
 import { comparisonWeight } from "../../lib/weightUnits";
 import {performedTimestamp} from '../../lib/performedOrder';
 import type { Exercise, Location, PrResult, StrengthSet, WorkoutDraft } from './types'
@@ -11,7 +12,23 @@ export function filterExercises(exercises:Exercise[], filters:ExerciseFilters){c
 export function rankExercises(exercises:Exercise[]){return [...exercises].sort((a,b)=>b.usageCount-a.usageCount||(b.lastUsedAt?Date.parse(b.lastUsedAt):0)-(a.lastUsedAt?Date.parse(a.lastUsedAt):0)||a.name.localeCompare(b.name))}
 export function validateSet(set:StrengthSet){const errors:string[]=[];const finite=(v:number|undefined)=>v===undefined||Number.isFinite(v);if(!finite(set.weight)||!finite(set.reps)||!finite(set.load)||!finite(set.distance)||!finite(set.laps)||!finite(set.durationSeconds))errors.push('All numbers must be finite.');if(set.trackingType==='repetitions'){if(set.reps===undefined||!Number.isSafeInteger(set.reps)||set.reps<0)errors.push('Reps must be a whole number greater than or equal to zero.');if(set.loadMode==='reps_only'&&set.weight!==undefined)errors.push('Reps-only sets cannot include weight.');if(set.loadMode!=='reps_only'&&(set.weight===undefined||set.weight<0))errors.push('Weight must be zero or more.');if(set.distance!==undefined||set.distanceUnit!==undefined||set.laps!==undefined)errors.push('Repetition sets cannot include distance fields.')}else{if(set.load===undefined||set.load<0)errors.push('Load must be zero or more.');if(set.distance===undefined||set.distance<=0)errors.push('Distance per lap must be greater than zero.');if(!set.distanceUnit)errors.push('Choose a distance unit.');if(set.laps===undefined||!Number.isInteger(set.laps)||set.laps<1)errors.push('Laps must be a whole number of at least one.');if(set.durationSeconds!==undefined&&set.durationSeconds<0)errors.push('Duration cannot be negative.');if(set.weight!==undefined||set.reps!==undefined)errors.push('Distance sets cannot include repetition fields.')}return errors}
 export function orderedSets(draft:WorkoutDraft){let order=0;return draft.exercises.flatMap(block=>block.sets.map(set=>({...set,exerciseId:block.exercise?.id??'',trackingType:block.exercise?.trackingType??set.trackingType,loadMode:block.exercise?.loadMode??set.loadMode,progressionDirection:block.exercise?.progressionDirection??set.progressionDirection,setOrder:++order}))) }
-export function validateWorkout(draft:WorkoutDraft){const errors:string[]=[];if(!draft.date)errors.push('Choose a workout date.');if(!draft.id&&draft.exercises.length!==1)errors.push('New entries must contain one exercise.');if(!draft.exercises.length)errors.push('Add at least one exercise.');draft.exercises.forEach((block,i)=>{if(!block.exercise)errors.push(`Exercise ${i+1}: choose an exercise.`);if(!block.sets.length)errors.push(`Exercise ${i+1}: add at least one set.`);block.sets.forEach((set,j)=>validateSet({...set,trackingType:block.exercise?.trackingType??set.trackingType,loadMode:block.exercise?.loadMode??set.loadMode}).forEach(e=>errors.push(`${block.exercise?.name??`Exercise ${i+1}`} set ${j+1}: ${e}`))) });return errors}
+export function validateWorkout(draft:WorkoutDraft){
+ const errors:string[]=[];
+ if(!draft.date)errors.push('Choose a workout date.');
+ if(!draft.id&&draft.exercises.length!==1)errors.push('New entries must contain one exercise.');
+ if(!draft.exercises.length)errors.push('Add at least one exercise.');
+ draft.exercises.forEach((block,i)=>{
+  if(!block.exercise)errors.push(`Exercise ${i+1}: choose an exercise.`);
+  if(!block.sets.length)errors.push(`Exercise ${i+1}: add at least one set.`);
+  block.sets.forEach((set,j)=>{
+   const label=`${block.exercise?.name??`Exercise ${i+1}`} set ${j+1}`;
+   const check=(row:StrengthSet,prefix:string)=>validateSet({...row,trackingType:block.exercise?.trackingType??row.trackingType,loadMode:block.exercise?.loadMode??row.loadMode}).forEach(error=>errors.push(`${prefix}: ${error}`));
+   check(set,label);
+   set.dropSets?.forEach((drop,index)=>check(drop,`${label} Drop Set ${index+1}`));
+  });
+ });
+ return errors;
+}
 export function localDateToIso(date:string, now=new Date()){const [y,m,d]=date.split('-').map(Number);const local=new Date(y,m-1,d,now.getHours(),now.getMinutes(),now.getSeconds());return local.toISOString()}
 export function localDateKey(iso:string){const d=new Date(iso);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 export type DailyStrengthGroup={date:string;exerciseId:string;exerciseName:string;locationId:string|null;locationName:string|null;workouts:string[];sets:(StrengthSet&{exercise:Exercise})[]}
@@ -19,7 +36,7 @@ export function groupDailyStrength(workouts:import('./types').Workout[]):DailySt
 export function chooseDefaultLocation(locations:Location[], nextId:string){return locations.map(l=>({...l,isDefault:!l.archived&&l.id===nextId}))}
 export type TimedSet=StrengthSet&{id?:string;performedAt:string;createdAt?:string;workoutId?:string}
 export function detectRepetitionPrs(sets:TimedSet[]):PrResult[]{
- const sorted=[...sets].filter(set=>Number.isFinite(performedTimestamp(set.performedAt))).sort((a,b)=>performedTimestamp(a.performedAt)-performedTimestamp(b.performedAt)||(performedTimestamp(a.createdAt??a.performedAt)-performedTimestamp(b.createdAt??b.performedAt)||0)||a.setOrder-b.setOrder||(a.id??'').localeCompare(b.id??''));
+ const sorted=sets.flatMap(set=>performances(set)).filter(set=>Number.isFinite(performedTimestamp(set.performedAt))).sort((a,b)=>performedTimestamp(a.performedAt)-performedTimestamp(b.performedAt)||(performedTimestamp(a.createdAt??a.performedAt)-performedTimestamp(b.createdAt??b.performedAt)||0)||a.setOrder-b.setOrder||(a.dropOrder??0)-(b.dropOrder??0)||(a.id??'').localeCompare(b.id??''));
  const firstEntry=new Map<string,string>(),maxWeight=new Map<string,number>(),maxReps=new Map<string,number>();
  return sorted.map((set,index)=>{
   const setKey=set.id??String(index),kinds:PrResult['kinds']=[],entry=set.workoutId??setKey;

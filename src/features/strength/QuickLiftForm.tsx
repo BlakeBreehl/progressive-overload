@@ -32,7 +32,7 @@ export function QuickLiftForm({
 }) {
   const [pending, setPending] = useState<Exercise | null>(null);
   const applyExercise = (exercise: Exercise) => {
-    onChange(current => ({ ...current, exercise, sets: current.sets.map(set => ({ ...set, weight: exercise.trackingType === "distance" || exercise.loadMode === "reps_only" ? "" : set.weight, reps: exercise.trackingType === "distance" ? "" : set.reps })), weight: exercise.trackingType === "distance" || exercise.loadMode === "reps_only" ? "" : current.weight, reps: exercise.trackingType === "distance" ? "" : current.reps, distance: exercise.trackingType === "distance" ? current.distance : "", laps: exercise.trackingType === "distance" ? current.laps : "" }));
+    onChange(current => ({ ...current, exercise, sets: current.sets.map(set => ({ ...set, dropSets: exercise.trackingType === "distance" ? undefined : set.dropSets?.map(drop=>({...drop,weight:exercise.loadMode === "reps_only" ? "" : drop.weight})), weight: exercise.trackingType === "distance" || exercise.loadMode === "reps_only" ? "" : set.weight, reps: exercise.trackingType === "distance" ? "" : set.reps })), weight: exercise.trackingType === "distance" || exercise.loadMode === "reps_only" ? "" : current.weight, reps: exercise.trackingType === "distance" ? "" : current.reps, distance: exercise.trackingType === "distance" ? current.distance : "", laps: exercise.trackingType === "distance" ? current.laps : "" }));
     setQ(exercise.name); setOpen(false);
   };
   const [q, setQ] = useState(draft.exercise?.name ?? ""),
@@ -139,7 +139,7 @@ export function QuickLiftForm({
                       className="field-input"
                       inputMode="numeric"
                       type="number"
-                      min="1"
+                      min="0"
                       step="1"
                       value={set.reps}
                       onChange={(e) => setValue(set.key, "reps", e.target.value)}

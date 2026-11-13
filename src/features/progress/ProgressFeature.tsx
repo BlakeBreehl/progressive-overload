@@ -36,7 +36,7 @@ import {
   type StrengthPoint,
 } from "./logic";
 import { defaultStrengthExercise } from "./defaultExercise";
-import { loadCardioProgressRows, loadStrengthProgressRows, strengthPrEvidence, strengthExerciseUsage, type StrengthProgressRow } from "./repository";
+import { loadCardioProgressRows, strengthPerformances, loadStrengthProgressRows, strengthPrEvidence, strengthExerciseUsage, type StrengthProgressRow } from "./repository";
 import { TimeXAxis } from "../../components/TimeXAxis";
 import { fullLocalDateLabel } from "../../lib/timeAxis";
 
@@ -98,7 +98,7 @@ function parseStrength(
   historical: HistoricalRow[] = [], unit:WeightUnit="lb",
 ): ParsedStrength[] {
   const badges=new Map(detectRepetitionPrs(strengthPrEvidence(rows)).map(pr=>[pr.setKey,pr.kinds[0]]));
-  const dated = rows.flatMap((row) => {
+  const dated = strengthPerformances(rows).flatMap((row) => {
     const exercise = relationObject<{ id: string; name: string; progression_direction?:string }>(
         row.exercise,
         "progress.strength.exercise",

@@ -1,3 +1,4 @@
+import { isCountableMainSet } from './dropSets';
 import { comparisonWeight, convertWeight } from '../../lib/weightUnits';
 import { convertDistance } from '../../lib/distanceUnits';
 import { performedTimestamp } from '../../lib/performedOrder';
@@ -6,12 +7,13 @@ import { isRepsOnlyExercise } from './logic';
 import type { Exercise, ExerciseSummarySet } from './types';
 
 export type ExerciseSummaryRow = {
+  drop_sets?: {id:string;drop_order:number;weight:number|null;weight_unit?:"lb"|"kg";reps:number}[]; parent_set_id?:string; drop_order?:number;
   id?: string; exercise_id: string; set_order?: number;
   weight: number | null; weight_unit?: 'lb' | 'kg'; reps: number | null;
   load?: number | null; distance?: number | null; distance_unit?: string | null;
   laps?: number | null; duration_seconds?: number | null; workout: unknown;
 };
-type Evidence = { value: ExerciseSummarySet; workoutId: string; performed: number; created: number; order: number; id: string; date: string };
+type Evidence = { countable:boolean; value: ExerciseSummarySet; workoutId: string; performed: number; created: number; order: number; id: string; date: string };
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 const chronology = (a: Evidence, b: Evidence) => a.performed - b.performed || a.created - b.created || a.order - b.order || a.id.localeCompare(b.id);
 const distanceMetric = (set: ExerciseSummarySet) => set.distance == null ? undefined : convertDistance(set.distance, set.distanceUnit ?? '', 'meters');
@@ -36,7 +38,7 @@ function comparePerformance(exercise: Exercise, a: Evidence, b: Evidence) {
 export function summarizeExercises(exercises: Exercise[], rows: ExerciseSummaryRow[]): Exercise[] {
   const definitions = new Map(exercises.map(exercise => [exercise.id, exercise]));
   const grouped = new Map<string, Evidence[]>(), attempts = new Map<string, number>();
-  for (const row of rows) {
+  for (const row of rows.flatMap(main=>{const {drop_sets,...row}=main;return [row,...(drop_sets??[]).map(drop=>({...row,...drop,parent_set_id:main.id}))]})) {
     const exercise = definitions.get(row.exercise_id);
     if (!exercise) continue;
     if (exercise.trackingType === 'repetitions') {
@@ -46,7 +48,7 @@ export function summarizeExercises(exercises: Exercise[], rows: ExerciseSummaryR
     const workout = relationObject<{ id?: string; performed_at: string; created_at?: string }>(row.workout, 'strength.summary.workout');
     if (!workout || !Number.isFinite(performedTimestamp(workout.performed_at))) continue;
     const value: ExerciseSummarySet = {
-      weight: finite(row.weight) ? row.weight : undefined, weightUnit: row.weight_unit ?? 'lb',
+      dropOrder: row.drop_order, weight: finite(row.weight) ? row.weight : undefined, weightUnit: row.weight_unit ?? 'lb',
       reps: finite(row.reps) ? row.reps : undefined,
       load: finite(row.load) ? row.load : undefined,
       distance: finite(row.distance) && finite(convertDistance(row.distance, row.distance_unit ?? '', 'meters')) ? row.distance : undefined,
@@ -56,7 +58,7 @@ export function summarizeExercises(exercises: Exercise[], rows: ExerciseSummaryR
     };
     if (exercise.trackingType === 'distance' && !(value.distance != null && value.distance > 0) && !(value.laps != null && Number.isSafeInteger(value.laps)) && !(value.durationSeconds != null && value.durationSeconds > 0)) continue;
     const list = grouped.get(exercise.id) ?? [];
-    list.push({ value, workoutId: workout.id ?? workout.performed_at, performed: performedTimestamp(workout.performed_at), created: performedTimestamp(workout.created_at ?? workout.performed_at) || 0, order: row.set_order ?? 0, id: row.id ?? '', date: workout.performed_at });
+    list.push({ countable:isCountableMainSet({...row,trackingType:exercise.trackingType}), value, workoutId: workout.id ?? workout.performed_at, performed: performedTimestamp(workout.performed_at), created: performedTimestamp(workout.created_at ?? workout.performed_at) || 0, order: row.set_order ?? 0, id: row.id ?? '', date: workout.performed_at });
     grouped.set(exercise.id, list);
   }
   return exercises.map(exercise => {
@@ -65,7 +67,7 @@ export function summarizeExercises(exercises: Exercise[], rows: ExerciseSummaryR
     const bestOf = (records: Evidence[]) => records.reduce<Evidence | undefined>((best, row) => !best || comparePerformance(exercise, row, best) > 0 ? row : best, undefined);
     const best = bestOf(successful)?.value;
     const last = bestOf(successful.filter(row => row.workoutId === latest?.workoutId))?.value;
-    return { ...exercise, usageCount: successful.length, lastUsedAt: latest?.date ?? null,
+    return { ...exercise, usageCount: successful.filter(row=>row.countable).length, lastUsedAt: latest?.date ?? null,
       prWeight: best?.weight == null ? undefined : convertWeight(best.weight, best.weightUnit ?? 'lb', 'lb'),
       lastWeight: last?.weight == null ? undefined : convertWeight(last.weight, last.weightUnit ?? 'lb', 'lb'), lastReps: last?.reps,
       logSummary: { state: 'ready', attempts: attempts.get(exercise.id) ?? 0, best, last },

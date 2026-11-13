@@ -1,4 +1,5 @@
-﻿import {relationObject} from '../../lib/supabaseError';
+import { isCountableMainSet } from './dropSets';
+import {relationObject} from '../../lib/supabaseError';
 import {localDateKey} from './logic';
 import {mondayOf} from '../weight/weeklySummary';
 import {countSetGroups,setGroups} from './setBreakdown';
@@ -19,7 +20,7 @@ export function setTrend(rows:StrengthProgressRow[],timeframe:SetTimeframe,{loca
  const aggregation=setAggregation(timeframe),today=localDateKey(now.toISOString()),current=setBucket(today,aggregation);
  const buckets=new Map<string,{id:string;exercise:unknown}[]>(),seen=new Set<string>();
  for(const row of rows){
-  if(row.tracking_type==='repetitions'&&!(row.reps!=null&&Number.isSafeInteger(row.reps)&&row.reps>0))continue;
+  if(!isCountableMainSet(row))continue;
   if(row.tracking_type==='distance'&&!((row.distance!=null&&Number.isFinite(row.distance)&&row.distance>0&&row.distance_unit)||(row.laps!=null&&Number.isSafeInteger(row.laps)&&row.laps>0)))continue;
   const workout=relationObject<{performed_at:string;location:{id:string}|null}>(row.workout,'set trend workout');
   if(!row.id||seen.has(row.id)||!workout)continue;

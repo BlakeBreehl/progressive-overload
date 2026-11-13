@@ -1,0 +1,39 @@
+{
+  "migration": "202611130014_nested_strength_drop_sets.sql",
+  "supportedStates": [
+    "clean-post-013",
+    "compatible-partial-014",
+    "compatible-completed-014"
+  ],
+  "validation": "source contracts only; no SQL execution",
+  "fullTests": {
+    "passed": 662,
+    "total": 662,
+    "failed": 0
+  },
+  "focusedMigrationTests": {
+    "passed": 116,
+    "files": 12
+  },
+  "lint": "passed",
+  "typescript": "passed",
+  "productionBuild": "passed",
+  "gitDiffCheck": "passed",
+  "appliedMigrations001Through013": "unchanged (SHA-256 compared)",
+  "migration015Created": false,
+  "supabaseConnected": false,
+  "sqlApplied": false,
+  "deployed": false,
+  "pushed": false,
+  "liveDataChanged": false,
+  "checkExpressionRegression": {
+    "tests": 28,
+    "validatorBlocks": [
+      "installation preflight",
+      "independent postflight"
+    ],
+    "literalOnlyBigintNormalization": true,
+    "orderedBooleanTreeVerification": true,
+    "sqlExecuted": false
+  }
+}

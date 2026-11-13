@@ -20,7 +20,7 @@ export function exerciseLogSubtitle(exercise: Exercise, unit: string) {
     const bestText = result(best, false), lastText = result(last, true);
     return [bestText && `Best: ${bestText}`, lastText && `Last: ${lastText}`].filter(Boolean).join(' · ') || 'Distance entries logged';
   }
-  if (isRepsOnlyExercise(exercise)) return `Rep PR: ${best.reps} reps · Last: ${last.reps} reps`;
+  if (isRepsOnlyExercise(exercise)) return `Rep PR: ${best.reps} reps · Last: ${last.dropOrder?`Drop Set ${last.dropOrder}: `:""}${last.reps} reps`;
   const weight = (set: ExerciseSummarySet) => `${displayWeight(set.weight!, set.weightUnit ?? 'lb', unit as WeightUnit)} ${unit}`;
-  return `${exercise.progressionDirection === 'lower_is_better' ? 'Best assistance' : 'Weight PR'}: ${weight(best)} · Last: ${weight(last)} × ${last.reps}`;
+  return `${exercise.progressionDirection === 'lower_is_better' ? 'Best assistance' : 'Weight PR'}: ${weight(best)} · Last: ${last.dropOrder?`Drop Set ${last.dropOrder}: `:""}${weight(last)} × ${last.reps}`;
 }

@@ -1,0 +1,3 @@
+﻿import {createServer} from 'vite';
+const server=await createServer({server:{host:'127.0.0.1',port:5198,strictPort:true},plugins:[{name:'release24-fixture',configureServer(server){server.middlewares.use('/__release24',async(_request,response)=>{response.setHeader('Content-Type','text/html');response.end(await server.transformIndexHtml('/__release24','<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><pre id="result" hidden>RUNNING</pre><div id="root"></div><script type="module" src="/tests/browser/release24.jsx"></script></body></html>'));});}}]});
+await server.listen();console.log('Release 2.4 fixture on 5198');

@@ -1,0 +1,44 @@
+[
+  {
+    "mode": "chromium",
+    "width": 320,
+    "height": 568,
+    "failures": [],
+    "checks": "nested create/edit/duplicate/remove/failure/typing/focus/history/progress"
+  },
+  {
+    "mode": "chromium",
+    "width": 375,
+    "height": 812,
+    "failures": [],
+    "checks": "nested create/edit/duplicate/remove/failure/typing/focus/history/progress"
+  },
+  {
+    "mode": "chromium",
+    "width": 390,
+    "height": 844,
+    "failures": [],
+    "checks": "nested create/edit/duplicate/remove/failure/typing/focus/history/progress"
+  },
+  {
+    "mode": "chromium",
+    "width": 430,
+    "height": 932,
+    "failures": [],
+    "checks": "nested create/edit/duplicate/remove/failure/typing/focus/history/progress"
+  },
+  {
+    "mode": "chromium",
+    "width": 768,
+    "height": 1024,
+    "failures": [],
+    "checks": "nested create/edit/duplicate/remove/failure/typing/focus/history/progress"
+  },
+  {
+    "mode": "chromium",
+    "width": 1280,
+    "height": 900,
+    "failures": [],
+    "checks": "nested create/edit/duplicate/remove/failure/typing/focus/history/progress"
+  }
+]

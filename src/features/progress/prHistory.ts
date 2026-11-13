@@ -1,12 +1,12 @@
 ﻿import {detectRepetitionPrs, localDateKey} from '../strength/logic';
 import {relationObject} from '../../lib/supabaseError';
-import {strengthPrEvidence, type StrengthProgressRow} from './repository';
+import {strengthPrEvidence, strengthPerformances, type StrengthProgressRow} from './repository';
 export type PrPeriod={period:string;weight:number;reps:number};
 /** Classify the complete history before filtering events by location. */
 export function prHistory(rows:StrengthProgressRow[],period:'monthly'|'yearly',location=''):PrPeriod[]{
  const evidence=strengthPrEvidence(rows);
  const badges=new Map(detectRepetitionPrs(evidence).map(event=>[event.setKey,event.kinds[0]]));
- const byId=new Map(rows.map(row=>[row.id,row]));
+ const byId=new Map(strengthPerformances(rows).map(row=>[row.id,row]));
  const events=evidence.flatMap(set=>{
   const row=byId.get(set.id);
   const workout=relationObject<{location:{id:string}|null}>(row?.workout,'pr.history.location');

@@ -1,0 +1,3 @@
+import {createServer} from 'vite';
+const server=await createServer({server:{host:'127.0.0.1',port:5197,strictPort:true},plugins:[{name:'drop-fixture',configureServer(server){server.middlewares.use('/__drop-sets',async(_request,response)=>{response.setHeader('Content-Type','text/html');response.end(await server.transformIndexHtml('/__drop-sets','<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><pre id="result" hidden>RUNNING</pre><div id="root"></div><script type="module" src="/tests/browser/dropSets.jsx"></script></body></html>'));});}}]});
+await server.listen();console.log('Drop set fixture on 5197');

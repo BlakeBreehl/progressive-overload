@@ -4,7 +4,7 @@ import { localDateKey } from './logic'
 export function exerciseChangeWarning(from: Exercise | null, to: Exercise): string {
   if (!from) return ''
   if (from.trackingType !== to.trackingType) return to.trackingType === 'distance'
-    ? 'Reps and repetition weight cannot transfer to Distance/Laps and will be removed. Existing load, duration, notes, set identities and workout details remain. Enter distance and laps before saving.'
+    ? 'All nested drop sets, reps and repetition weight cannot transfer to Distance/Laps and will be removed. Existing load, duration, notes, set identities and workout details remain. Enter distance and laps before saving.'
     : 'Distance, distance unit and laps cannot transfer to Weight/Reps and will be removed. Load, duration, notes, set identities and workout details remain. Enter reps and any required weight before saving.'
   if (to.trackingType === 'distance') return ''
   if (from.loadMode !== 'reps_only' && to.loadMode === 'reps_only') return 'Weight values will be removed. Reps, all sets, notes, duration and workout details remain.'
@@ -16,8 +16,13 @@ export function exerciseChangeWarning(from: Exercise | null, to: Exercise): stri
 export function changeExercise(block: WorkoutExercise, exercise: Exercise): WorkoutExercise {
   return { ...block, exercise, sets: block.sets.map(set => {
     const next = { ...set, exerciseId: exercise.id, trackingType: exercise.trackingType, loadMode: exercise.loadMode, progressionDirection: exercise.progressionDirection }
-    if (exercise.trackingType === 'distance') { delete next.weight; delete next.reps }
+    if (exercise.trackingType === 'distance') {
+      delete next.weight; delete next.reps
+      // Explicit [] clears saved children; omission means preserve for legacy RPC callers.
+      if (next.dropSets !== undefined) next.dropSets = []
+    }
     else { delete next.distance; delete next.distanceUnit; delete next.laps; if (exercise.loadMode === 'reps_only') delete next.weight }
+    if (next.dropSets) next.dropSets = changeExercise({ ...block, sets: next.dropSets }, exercise).sets
     return next
   }) }
 }

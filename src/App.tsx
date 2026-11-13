@@ -6,7 +6,7 @@ import {startAccountBootstrap} from "./lib/accountBootstrap";
 import { MobileNavigation } from "./components/MobileNavigation";
 import { FeatureBoundary } from "./components/FeatureBoundary";
 import { dataLoadMessage } from "./lib/supabaseError";
-import { StrengthTrendsAnnouncement } from "./components/StrengthTrendsAnnouncement";
+import { DropSetsAnnouncement } from "./components/DropSetsAnnouncement";
 import {
   Suspense,
   useEffect,
@@ -626,7 +626,7 @@ function App() {
   };
   return (
     <div className="app-frame min-h-screen bg-white text-slate-700">
-      {supabase&&auth.session&&<StrengthTrendsAnnouncement key={auth.session.user.id} client={supabase} userId={auth.session.user.id} ready={loadedUserId===auth.session.user.id&&!setupError}/>}
+      {supabase&&auth.session&&<DropSetsAnnouncement key={auth.session.user.id} client={supabase} userId={auth.session.user.id} ready={!auth.loading&&loadedUserId===auth.session.user.id&&!setupError}/>}
       <aside className="sidebar">
         <Logo />
         <nav className="mt-10 flex flex-col gap-1">
